@@ -1,29 +1,41 @@
 package com.nextcalendar.entity;
 
 import jakarta.persistence.*;
-
-import java.sql.Timestamp;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+import java.time.LocalDateTime;
 import java.util.Date;
+import java.util.UUID;
 
 @Entity
-@Table(name="cliente")
+@Table(name="clients")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 
 public class ClientEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    private int id;
+    private UUID id;
 
     @ManyToOne
     @JoinColumn(name = "establishment_id")
     private EstablishmentEntity establishment;
+
+    @OneToOne(mappedBy = "client")
+    private TechnicalSheetEntity technicalSheet;
 
     @Column(nullable = false)
     private String name;
 
     @Column(nullable = false)
     private String phone;
-
 
     @Column(nullable = false)
     private String email;
@@ -32,8 +44,11 @@ public class ClientEntity {
     private String photoUrl;
     private String notes;
     private Boolean active;
-    private Timestamp createdAt;
-    private Timestamp updatedAt;
 
+    @CreationTimestamp
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
 
 }

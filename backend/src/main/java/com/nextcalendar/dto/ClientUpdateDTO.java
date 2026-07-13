@@ -1,4 +1,9 @@
 package com.nextcalendar.dto;
 
-public class ClientUpdateDTO {
+public record ClientUpdateDTO(
+        String name,
+        String phone,
+        String email,
+        String photoUrl,
+        String notes) {
 }

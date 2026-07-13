@@ -7,48 +7,38 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.UUID;
 
 @Entity
-@Table(name="clients")
+@Table(name = "technical_sheets")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 
-public class ClientEntity {
 
+public class TechnicalSheetEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne
-    @JoinColumn(name = "establishment_id")
-    private EstablishmentEntity establishment;
+    @OneToOne
+    @JoinColumn(name = "client_id", nullable = false, unique = true)
+    private ClientEntity client;
 
-    @OneToOne(mappedBy = "client")
-    private TechnicalSheetEntity technicalSheet;
+    @Column(columnDefinition = "TEXT")
+    private String observations;
 
-    @Column(nullable = false)
-    private String name;
-
-    @Column(nullable = false)
-    private String phone;
-
-    @Column(nullable = false)
-    private String email;
-
-    private Date dateOfBirth;
-    private String photoUrl;
-    private String notes;
-    private Boolean active;
+    //private List<ServicePhoto> photos;
 
     @CreationTimestamp
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
+    @Column(nullable = false)
     private LocalDateTime updatedAt;
 
 }

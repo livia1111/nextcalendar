@@ -7,48 +7,56 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.UUID;
 
+
 @Entity
-@Table(name="clients")
+@Table(name = "professionals")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 
-public class ClientEntity {
-
+public class ProfessionalEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @ManyToOne
-    @JoinColumn(name = "establishment_id")
+    @JoinColumn(name = "establishment_id", nullable = false)
     private EstablishmentEntity establishment;
 
-    @OneToOne(mappedBy = "client")
-    private TechnicalSheetEntity technicalSheet;
 
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
-    private String phone;
+    private String nickname;
+
+    @Column(nullable = false, unique = true)
+    private String cpf;
+
 
     @Column(nullable = false)
     private String email;
 
-    private Date dateOfBirth;
+    private String phone;
+    private String gender;
     private String photoUrl;
-    private String notes;
+
+    @Column(precision = 5, scale = 2)
+    private BigDecimal commission;
+
     private Boolean active;
 
     @CreationTimestamp
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
+    @Column(nullable = false)
     private LocalDateTime updatedAt;
 
 }

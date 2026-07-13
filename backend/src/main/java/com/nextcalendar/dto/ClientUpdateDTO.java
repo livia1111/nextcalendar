@@ -1,4 +1,4 @@
 package com.nextcalendar.dto;
 
-public class UpdateClientDTO {
+public class ClientUpdateDTO {
 }

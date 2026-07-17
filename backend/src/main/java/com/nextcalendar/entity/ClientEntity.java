@@ -26,9 +26,6 @@ public class ClientEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne
-    @JoinColumn(name = "establishment_id")
-    private EstablishmentEntity establishment;
 
     @OneToOne(mappedBy = "client")
     private TechnicalSheetEntity technicalSheet;

@@ -21,11 +21,23 @@ public class ClientMapper {
 
     public  static void updateEntity(ClientEntity client, ClientUpdateDTO dto){
 
-        client.setName(dto.name());
-        client.setPhone(dto.phone());
-        client.setEmail(dto.email());
-        client.setPhotoUrl(dto.photoUrl());
-        client.setNotes(dto.notes());
+        if(dto.name() != null && !dto.name().isEmpty()){
+            client.setName(dto.name());
+        }
+        if (dto.phone() != null && !dto.phone().isBlank()) {
+            client.setPhone(dto.phone());
+        }
 
+        if (dto.email() != null && !dto.email().isBlank()) {
+            client.setEmail(dto.email());
+        }
+
+        if (dto.photoUrl() != null) {
+            client.setPhotoUrl(dto.photoUrl());
+        }
+
+        if (dto.notes() != null) {
+            client.setNotes(dto.notes());
+        }
     }
 }

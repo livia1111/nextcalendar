@@ -1,4 +1,5 @@
 package com.nextcalendar.dto;
 
-public record ValidationErrorResponseDTO() {
+public record ValidationErrorResponseDTO(String field, String message) {
+
 }

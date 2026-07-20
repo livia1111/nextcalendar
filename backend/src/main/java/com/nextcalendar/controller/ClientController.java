@@ -1,9 +1,6 @@
 package com.nextcalendar.controller;
 
-import com.nextcalendar.dto.ClientCreateDTO;
-import com.nextcalendar.dto.ClientDetailsResponseDTO;
-import com.nextcalendar.dto.ClientProfileResponseDTO;
-import com.nextcalendar.dto.ClientUpdateDTO;
+import com.nextcalendar.dto.*;
 import com.nextcalendar.service.ClientService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -31,7 +28,7 @@ public class ClientController {
     public ClientDetailsResponseDTO findClientById(@PathVariable UUID id){return clientService.findClientById(id);}
 
     @GetMapping("/search")
-    public List<ClientDetailsResponseDTO> findClientsByName(@RequestParam String name){return clientService.findClientsByName(name);}
+    public List<ClientMinResponseDTO> findClientsByName(@RequestParam String name){return clientService.findClientsByName(name);}
 
     @PutMapping("/{id}")
     public ClientProfileResponseDTO updateClient(@PathVariable UUID id, @Valid @RequestBody ClientUpdateDTO dto){return clientService.updateClient(id,dto);}

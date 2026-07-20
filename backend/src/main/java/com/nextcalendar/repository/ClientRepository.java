@@ -12,6 +12,11 @@ public interface ClientRepository extends JpaRepository<ClientEntity, UUID> {
     Optional<ClientEntity> findByEmail(String email);
     //Optional<ClientEntity> findByCpf(String cpf);
 
+    boolean existsByEmail(String email);
+
+    boolean existsByEmailAndIdNot(String email, UUID id);
+
     List<ClientEntity> findByNameContainingIgnoreCase(String name);
+
 
 }

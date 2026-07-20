@@ -1,10 +1,8 @@
 package com.nextcalendar.service;
 
-import com.nextcalendar.dto.ClientCreateDTO;
-import com.nextcalendar.dto.ClientDetailsResponseDTO;
-import com.nextcalendar.dto.ClientProfileResponseDTO;
-import com.nextcalendar.dto.ClientUpdateDTO;
+import com.nextcalendar.dto.*;
 import com.nextcalendar.entity.ClientEntity;
+import com.nextcalendar.exception.BusinessException;
 import com.nextcalendar.exception.EntityNotFoundException;
 import com.nextcalendar.mapper.ClientMapper;
 import com.nextcalendar.repository.ClientRepository;
@@ -23,6 +21,9 @@ public class ClientService {
 
     public ClientProfileResponseDTO createClient(ClientCreateDTO clientDto){
 
+        if (clientRepository.existsByEmail(clientDto.email())){
+            throw new BusinessException("o E-mail " + clientDto.email() + " já está cadastrado no sistema.");
+        }
         ClientEntity client = ClientMapper.toEntity(clientDto);
 
         ClientEntity savedClient = clientRepository.save(client);
@@ -32,7 +33,14 @@ public class ClientService {
 
 
     public ClientProfileResponseDTO updateClient(UUID id, ClientUpdateDTO clientDto){
+
         ClientEntity client = clientRepository.findById(id).orElseThrow(()->new EntityNotFoundException("Cliente",id));
+
+        if(clientDto.email() != null && !clientDto.email().isBlank() && !clientDto.email().equals(client.getEmail())){
+            if (clientRepository.existsByEmailAndIdNot(clientDto.email(), id)) {
+                throw new BusinessException("O e-mail '" + clientDto.email() + "' já está sendo usado por outro cliente.");
+            }
+        }
 
         ClientMapper.updateEntity(client,clientDto);
 
@@ -47,10 +55,11 @@ public class ClientService {
     }
 
     //depois criar um dto mais simples apenas para a listagem dos clientes quando o profissional pesquisar
-    public List<ClientDetailsResponseDTO> findClientsByName(String name){
+    public List<ClientMinResponseDTO> findClientsByName(String name){
        return clientRepository.findByNameContainingIgnoreCase(name)
                 .stream()
-                .map(ClientDetailsResponseDTO::new)
+               .filter(client -> Boolean.TRUE.equals(client.getActive()))
+                .map(ClientMinResponseDTO::new)
                 .toList();
 
     }

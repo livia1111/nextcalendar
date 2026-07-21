@@ -13,12 +13,16 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import com.nextcalendar.exception.BusinessException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import org.springframework.data.domain.Pageable;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -221,25 +225,30 @@ public class ClientServiceTest {
     class FindClientsByNameTests {
 
         @Test
-        @DisplayName("Deve retornar lista de clientes ativos quando houver correspondência")
-        void shouldReturnClientsListWhenNameMatches() {
+        @DisplayName("Deve retornar lista paginada de clientes ativos quando houver correspondência")
+        void shouldReturnPagedClientsListWhenNameMatches() {
+
             String nameQuery = "Maria";
+            Pageable pageable = PageRequest.of(0, 10);
 
             ClientEntity client = new ClientEntity();
             client.setId(UUID.randomUUID());
             client.setName("Maria Silva");
             client.setActive(true);
 
-            when(clientRepository.findByNameContainingIgnoreCase(nameQuery))
-                    .thenReturn(List.of(client));
+            Page<ClientEntity> clientPage = new PageImpl<>(List.of(client), pageable, 1);
 
-            List<ClientMinResponseDTO> response = clientService.findClientsByName(nameQuery);
+            when(clientRepository.findByNameContainingIgnoreCaseAndActiveTrue(nameQuery, pageable))
+                    .thenReturn(clientPage);
+
+            Page<ClientMinResponseDTO> response = clientService.findClientsByName(nameQuery, pageable);
 
             assertNotNull(response);
-            assertEquals(1, response.size());
-            assertEquals("Maria Silva", response.get(0).name());
+            assertEquals(1, response.getTotalElements());
+            assertEquals(1, response.getTotalPages());
+            assertEquals("Maria Silva", response.getContent().get(0).name());
 
-            verify(clientRepository, times(1)).findByNameContainingIgnoreCase(nameQuery);
+            verify(clientRepository, times(1)).findByNameContainingIgnoreCaseAndActiveTrue(nameQuery, pageable);
         }
     }
 

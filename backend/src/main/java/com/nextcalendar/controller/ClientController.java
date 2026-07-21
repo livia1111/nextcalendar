@@ -3,10 +3,12 @@ package com.nextcalendar.controller;
 import com.nextcalendar.dto.*;
 import com.nextcalendar.service.ClientService;
 import jakarta.validation.Valid;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Page;
 import java.util.UUID;
 
 @RestController
@@ -28,7 +30,7 @@ public class ClientController {
     public ClientDetailsResponseDTO findClientById(@PathVariable UUID id){return clientService.findClientById(id);}
 
     @GetMapping("/search")
-    public List<ClientMinResponseDTO> findClientsByName(@RequestParam String name){return clientService.findClientsByName(name);}
+    public Page<ClientMinResponseDTO> findClientsByName(@RequestParam(defaultValue = "") String name, Pageable pageable){return clientService.findClientsByName(name, pageable);}
 
     @PutMapping("/{id}")
     public ClientProfileResponseDTO updateClient(@PathVariable UUID id, @Valid @RequestBody ClientUpdateDTO dto){return clientService.updateClient(id,dto);}

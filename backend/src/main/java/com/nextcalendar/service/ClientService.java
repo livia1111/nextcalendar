@@ -6,9 +6,12 @@ import com.nextcalendar.exception.BusinessException;
 import com.nextcalendar.exception.EntityNotFoundException;
 import com.nextcalendar.mapper.ClientMapper;
 import com.nextcalendar.repository.ClientRepository;
+
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import java.util.UUID;
 
 @Service
@@ -55,12 +58,9 @@ public class ClientService {
     }
 
     //depois criar um dto mais simples apenas para a listagem dos clientes quando o profissional pesquisar
-    public List<ClientMinResponseDTO> findClientsByName(String name){
-       return clientRepository.findByNameContainingIgnoreCase(name)
-                .stream()
-               .filter(client -> Boolean.TRUE.equals(client.getActive()))
-                .map(ClientMinResponseDTO::new)
-                .toList();
+    public Page<ClientMinResponseDTO> findClientsByName(String name, Pageable pageable){
+       return clientRepository.findByNameContainingIgnoreCaseAndActiveTrue(name,pageable)
+                .map(ClientMinResponseDTO::new);
 
     }
 

@@ -1,8 +1,6 @@
 package com.nextcalendar.service;
 
-import com.nextcalendar.dto.ClientCreateDTO;
-import com.nextcalendar.dto.ClientProfileResponseDTO;
-import com.nextcalendar.dto.ClientUpdateDTO;
+import com.nextcalendar.dto.*;
 import com.nextcalendar.entity.ClientEntity;
 import com.nextcalendar.exception.EntityNotFoundException;
 import com.nextcalendar.repository.ClientRepository;
@@ -16,13 +14,16 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import com.nextcalendar.exception.BusinessException;
 
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+
 
 @ExtendWith(MockitoExtension.class)
 public class ClientServiceTest {
@@ -174,5 +175,109 @@ public class ClientServiceTest {
             verify(clientRepository, never()).save(any(ClientEntity.class));
         }
 
+    }
+
+    @Nested
+    @DisplayName("Testes de Busca por ID (findClientById)")
+    class FindClientByIdTests {
+
+        @Test
+        @DisplayName("Deve retornar detalhes do cliente quando o ID existir")
+        void shouldReturnClientProfileWhenIdExists() {
+            UUID clientId = UUID.randomUUID();
+            ClientEntity client = new ClientEntity();
+            client.setId(clientId);
+            client.setName("Maria");
+            client.setEmail("maria@email.com");
+
+            when(clientRepository.findById(clientId)).thenReturn(Optional.of(client));
+
+            ClientDetailsResponseDTO response = clientService.findClientById(clientId);
+
+            assertNotNull(response);
+            assertEquals("Maria", response.name());
+            assertEquals("maria@email.com", response.email());
+
+            verify(clientRepository, times(1)).findById(clientId);
+        }
+
+        @Test
+        @DisplayName("Deve lançar EntityNotFoundException quando o ID não existir")
+        void shouldThrowExceptionWhenIdDoesNotExist() {
+            UUID invalidId = UUID.randomUUID();
+            when(clientRepository.findById(invalidId)).thenReturn(Optional.empty());
+
+            assertThrows(
+                    EntityNotFoundException.class,
+                    () -> clientService.findClientById(invalidId)
+            );
+
+            verify(clientRepository, times(1)).findById(invalidId);
+        }
+    }
+
+    @Nested
+    @DisplayName("Testes de Busca por Nome (findClientsByName)")
+    class FindClientsByNameTests {
+
+        @Test
+        @DisplayName("Deve retornar lista de clientes ativos quando houver correspondência")
+        void shouldReturnClientsListWhenNameMatches() {
+            String nameQuery = "Maria";
+
+            ClientEntity client = new ClientEntity();
+            client.setId(UUID.randomUUID());
+            client.setName("Maria Silva");
+            client.setActive(true);
+
+            when(clientRepository.findByNameContainingIgnoreCase(nameQuery))
+                    .thenReturn(List.of(client));
+
+            List<ClientMinResponseDTO> response = clientService.findClientsByName(nameQuery);
+
+            assertNotNull(response);
+            assertEquals(1, response.size());
+            assertEquals("Maria Silva", response.get(0).name());
+
+            verify(clientRepository, times(1)).findByNameContainingIgnoreCase(nameQuery);
+        }
+    }
+
+    @Nested
+    @DisplayName("Testes de Deleção de Cliente (deleteClient)")
+    class DeleteClientTests {
+
+        @Test
+        @DisplayName("Deve inativar o cliente (soft delete) quando o ID existir")
+        void shouldInactivateClientSuccessfullyWhenIdExists() {
+            UUID clientId = UUID.randomUUID();
+            ClientEntity client = new ClientEntity();
+            client.setId(clientId);
+            client.setActive(true);
+
+            when(clientRepository.findById(clientId)).thenReturn(Optional.of(client));
+            when(clientRepository.save(any(ClientEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+            assertDoesNotThrow(() -> clientService.deleteClient(clientId));
+
+            assertFalse(client.getActive());
+            verify(clientRepository, times(1)).findById(clientId);
+            verify(clientRepository, times(1)).save(client);
+        }
+
+        @Test
+        @DisplayName("Deve lançar EntityNotFoundException ao tentar deletar ID inexistente")
+        void shouldThrowExceptionWhenDeletingNonExistingId() {
+            UUID invalidId = UUID.randomUUID();
+            when(clientRepository.findById(invalidId)).thenReturn(Optional.empty());
+
+            assertThrows(
+                    EntityNotFoundException.class,
+                    () -> clientService.deleteClient(invalidId)
+            );
+
+            verify(clientRepository, times(1)).findById(invalidId);
+            verify(clientRepository, never()).save(any());
+        }
     }
 }

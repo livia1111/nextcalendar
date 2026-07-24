@@ -18,8 +18,11 @@ import java.util.UUID;
 public class ClientService {
     private final ClientRepository clientRepository;
 
-    public ClientService(ClientRepository clientRepository) {
+    private final ClientMapper clientMapper;
+
+    public ClientService(ClientRepository clientRepository, ClientMapper clientMapper) {
         this.clientRepository=clientRepository;
+        this.clientMapper=clientMapper;
     }
 
     public ClientProfileResponseDTO createClient(ClientCreateDTO clientDto){
@@ -27,7 +30,7 @@ public class ClientService {
         if (clientRepository.existsByEmail(clientDto.email())){
             throw new BusinessException("o E-mail " + clientDto.email() + " já está cadastrado no sistema.");
         }
-        ClientEntity client = ClientMapper.toEntity(clientDto);
+        ClientEntity client = clientMapper.toEntity(clientDto);
 
         ClientEntity savedClient = clientRepository.save(client);
 
@@ -45,7 +48,7 @@ public class ClientService {
             }
         }
 
-        ClientMapper.updateEntity(client,clientDto);
+        clientMapper.updateEntity(client,clientDto);
 
         ClientEntity savedClient = clientRepository.save(client);
 

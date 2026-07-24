@@ -19,6 +19,10 @@ public record ClientCreateDTO(
         @Email(message = "O formato do e-mail é inválido")
         String email,
 
+        @NotBlank(message = "A senha é obrigatória")
+        @Size(min = 8, max = 100, message = "Senha deve possuir pelo menos 8 caracteres")
+        String password,
+
         @Past(message = "A data de nascimento deve ser uma data no passado")
         LocalDate dateOfBirth,
 

@@ -8,12 +8,29 @@ import { Button } from '@/components/ui/Button';
 import { InputField } from '@/components/ui/InputField';
 import { Colors } from '@/constants/colors';
 import { useAppFonts } from '@/hooks/use-fonts';
+import { forgotPassword } from '@/services/authServices'
 
 export default function ForgotPasswordScreen() {
   const { fontRegular, fontSemiBold } = useAppFonts();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [email, setEmail] = useState('');
+  const [error,setError] = useState('')
+  const [isSubmiting,setIsSubmiting] = useState(false);
+
+  async function handleSubmit(){
+    setError('');
+    setIsSubmiting(true)
+    try{
+      await forgotPassword(email);
+      router.push({pathname:'/verify-code', params:{  email }})
+      }catch(err:any){
+      setError(err?.message ?? 'Erro ao enviar codigo.Tente novamente')
+      }finally{
+        setIsSubmiting(false)
+            }
+  }
+  
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -44,7 +61,8 @@ export default function ForgotPasswordScreen() {
           keyboardType="email-address"
         />
 
-        <Button label="Enviar código" onPress={() => router.push('/verify-code' as any)} />
+        <Button label={isSubmiting ? 'Verificando...' : 'Verificar'} 
+        onPress={handleSubmit} />
 
       </ScrollView>
     </KeyboardAvoidingView>

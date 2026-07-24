@@ -7,7 +7,7 @@
  */
 
 import React from 'react';
-import Svg, { Circle, Path, Rect, G, Line } from 'react-native-svg';
+import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { Colors } from '@/constants/colors';
 
 // ─── Auth ───────────────────────────────────────────────────────────────────
@@ -78,6 +78,13 @@ export function ChevronLeftIcon({ color = Colors.dark, size = 24 }: { color?: st
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path d="M15 18l-6-6 6-6" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+export function PlusIcon({ color = Colors.dark, size = 24 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 5v14M5 12h14" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   );
 }

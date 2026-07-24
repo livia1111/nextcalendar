@@ -19,8 +19,10 @@ export default function RootLayout() {
 
         {/* Main App (tabs) */}
         <Stack.Screen name="(tabs)" />
+        
 
         {/* Detail screens */}
+        <Stack.Screen name="Schedulling" />
         <Stack.Screen name="barber/[id]" />
         <Stack.Screen name="booking" />
       </Stack>

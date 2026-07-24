@@ -21,12 +21,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    SecureStore.getItemAsync('authToken').then((token) => {
+  //useEffect(() => {
+    //SecureStore.getItemAsync('authToken').then((token) => {
       // TODO: se tiver token salvo, validar com o back e restaurar o usuário
-      setIsLoading(false);
-    });
-  }, []);
+      //setIsLoading(false);
+    //});
+  //}, []);
 
   async function signIn(email: string, password: string) {
     const { token, user } = await loginService(email, password);

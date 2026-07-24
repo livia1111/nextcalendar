@@ -8,16 +8,33 @@ import { Button } from '@/components/ui/Button';
 import { InputField } from '@/components/ui/InputField';
 import { Colors } from '@/constants/colors';
 import { useAppFonts } from '@/hooks/use-fonts';
+import { useAuth } from '@/context/AuthContext';
 
 export default function RegisterScreen() {
   const { fontRegular, fontSemiBold } = useAppFonts();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { signUp } = useAuth();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function handleRegister() {
+    setError('');
+    setIsSubmitting(true);
+    try {
+      await signUp({ name, email, password, phone });
+      router.push('/(tabs)/home' as any);
+    } catch (err: any) {
+      setError(err?.message ?? 'Erro ao criar conta. Tente novamente.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -45,7 +62,9 @@ export default function RegisterScreen() {
           <InputField label="Senha" value={password} onChangeText={setPassword} placeholder="••••••••••••" secureTextEntry />
         </View>
 
-        <Button label="Criar conta" onPress={() => router.push('/(tabs)/home' as any)} />
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+        <Button label={isSubmitting ? 'Criando conta...' : 'Criar conta'} onPress={handleRegister} disabled={isSubmitting} />
 
         <View style={styles.loginRow}>
           <Text style={[styles.loginText, { fontFamily: fontRegular }]}>Já tem uma conta? </Text>
@@ -67,6 +86,7 @@ const styles = StyleSheet.create({
   title: { color: Colors.dark, fontSize: 24, lineHeight: 36, fontWeight: '600' },
   subtitle: { color: Colors.grey400, fontSize: 14, lineHeight: 21.7, letterSpacing: -0.28 },
   form: { alignSelf: 'stretch', gap: 16 },
+  errorText: { color: '#D64545', fontSize: 13, alignSelf: 'stretch', textAlign: 'left' },
   loginRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   loginText: { color: Colors.grey400, fontSize: 14, lineHeight: 21.7, letterSpacing: -0.28 },
   loginLink: { color: Colors.gold, fontSize: 14, lineHeight: 21.7, letterSpacing: -0.28, fontWeight: '600' },

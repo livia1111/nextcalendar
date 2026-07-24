@@ -62,3 +62,44 @@ export async function register(data:RegisterPayload): Promise<RegisterResponse>{
     }
   }
 }
+
+type ForgotPasswordResponse = {
+  message:string;
+} 
+type VerifyCodeResponse = {
+  resetToken:string;
+}
+
+type ResetPasswordResponse = {
+  message:string;
+}
+
+export async function forgotPassword(email:string) : Promise<ForgotPasswordResponse>{
+  await new Promise((resolve)=> setTimeout(resolve,1000));
+
+  if(email ==='naoexiste@teste.com'){
+    throw {message:'Não encontramos uma conta com esse email'};
+  }
+
+  return {message:'Código enviado para o seu e-mail'}
+}
+
+export async function verifyCode(email:string,code:string) : Promise<VerifyCodeResponse>{
+  await new Promise((resolve)=>setTimeout(resolve,1000));
+
+  if(code!== '122222'){
+    throw{message:'Código inválido'}
+  }
+
+  return {resetToken:'reset-token-mockado'}
+}
+
+export async function resetPassword(resetToken:string,newPassword:string) : Promise<ResetPasswordResponse> {
+  await new Promise((resolve)=> setTimeout(resolve,1000))
+
+  if (!resetToken) {
+    throw { message: 'Sessão de redefinição expirada, solicite um novo código' };
+  }
+
+  return { message: 'Senha redefinida com sucesso' };
+}

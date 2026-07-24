@@ -39,6 +39,9 @@ public class ClientEntity {
     @Column(nullable = false)
     private String email;
 
+    @Column(nullable = false)
+    private String password;
+
     private LocalDate dateOfBirth;
     private String photoUrl;
     private String notes;

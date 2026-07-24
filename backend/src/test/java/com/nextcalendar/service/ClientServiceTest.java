@@ -3,13 +3,14 @@ package com.nextcalendar.service;
 import com.nextcalendar.dto.*;
 import com.nextcalendar.entity.ClientEntity;
 import com.nextcalendar.exception.EntityNotFoundException;
+import com.nextcalendar.mapper.ClientMapper;
 import com.nextcalendar.repository.ClientRepository;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import com.nextcalendar.exception.BusinessException;
@@ -23,6 +24,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -35,8 +38,20 @@ public class ClientServiceTest {
     @Mock
     private ClientRepository clientRepository;
 
-    @InjectMocks
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
+    private ClientMapper clientMapper;
+
     private ClientService clientService;
+
+    @BeforeEach
+    void setup() {
+
+        clientMapper = new ClientMapper(passwordEncoder);
+
+        clientService = new ClientService(clientRepository, clientMapper);
+    }
 
     @Nested
     @DisplayName("Testes de Criação de Cliente(createClient)")
@@ -48,31 +63,42 @@ public class ClientServiceTest {
                     "Maria",
                     "51999999999",
                     "maria@email.com",
+                    "12345678",
                     LocalDate.of(2000,1,1),
                     null,
                     "Alergia a pomada"
             );
 
+
+            when(passwordEncoder.encode(dto.password())).thenReturn("senhaCriptografada");
+
             when(clientRepository.existsByEmail(dto.email())).thenReturn(false);
 
-            ClientEntity savedEntity = new ClientEntity();
-            savedEntity.setId(UUID.randomUUID());
-            savedEntity.setName(dto.name());
-            savedEntity.setPhone(dto.phone());
-            savedEntity.setEmail(dto.email());
-            savedEntity.setDateOfBirth(dto.dateOfBirth());
-            savedEntity.setNotes(dto.notes());
+            when(clientRepository.save(any(ClientEntity.class)))
+                    .thenAnswer(invocation -> {
+                        ClientEntity entity = invocation.getArgument(0);
 
-            when(clientRepository.save(any(ClientEntity.class))).thenReturn(savedEntity);
+                        assertEquals("Maria", entity.getName());
+                        assertEquals("maria@email.com", entity.getEmail());
+                        assertEquals("senhaCriptografada", entity.getPassword());
+                        assertTrue(entity.getActive());
+
+                        return entity;
+                    });
 
             ClientProfileResponseDTO response = clientService.createClient(dto);
 
             assertNotNull(response);
+
             assertEquals("Maria", response.name());
             assertEquals("maria@email.com", response.email());
             assertEquals("51999999999", response.phone());
 
-            verify(clientRepository, times(1)).save(any(ClientEntity.class));
+            verify(passwordEncoder).encode(dto.password());
+
+            verify(clientRepository).existsByEmail(dto.email());
+
+            verify(clientRepository).save(any(ClientEntity.class));
         }
 
         @Test
@@ -82,6 +108,7 @@ public class ClientServiceTest {
                     "Maria",
                     "51999999999",
                     "duplicado@email.com",
+                    "12345678",
                     LocalDate.of(2000,1,1),
                     null,
                     null

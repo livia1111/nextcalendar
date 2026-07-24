@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useRouter,useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useRef, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -7,6 +7,7 @@ import { ChevronLeftIcon } from '@/components/icons';
 import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/colors';
 import { useAppFonts } from '@/hooks/use-fonts';
+import { verifyCode } from '@/services/authServices'
 
 const CODE_LENGTH = 4;
 
@@ -16,6 +17,24 @@ export default function VerifyCodeScreen() {
   const router = useRouter();
   const [code, setCode] = useState(['', '', '', '']);
   const inputs = useRef<(TextInput | null)[]>([]);
+  const { email } = useLocalSearchParams<{ email: string }>();
+  const [error, setError] = useState('');
+  const [isSubmiting, setIsSubmitting] = useState(false);
+
+
+  async function handleSubmit() {
+    setError('');
+    setIsSubmitting(true);
+    try {
+      const fullCode = code.join('')
+      const { resetToken } = await verifyCode(email, fullCode);
+      router.push({ pathname: '/new-password', params: { resetToken } });
+    } catch (err: any) {
+      setError(err?.message ?? 'Código inválido ou expirado.');
+    } finally {
+      setIsSubmitting(false);
+    } 
+}
 
   function handleChange(text: string, idx: number) {
     const digit = text.replace(/[^0-9]/g, '').slice(-1);
@@ -78,8 +97,8 @@ export default function VerifyCodeScreen() {
         </View>
 
         <Button
-          label="Verificar"
-          onPress={() => router.push('/new-password' as any)}
+          label={isSubmiting ? 'Verificando...' : 'Verificar'}
+          onPress={handleSubmit}
           disabled={code.some(d => !d)}
         />
       </View>

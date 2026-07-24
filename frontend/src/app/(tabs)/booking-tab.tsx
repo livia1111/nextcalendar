@@ -162,7 +162,7 @@ export default function BookingTabScreen() {
       {/* Novo Agendamento */}
       <TouchableOpacity
         style={styles.newBookingButton}
-        onPress={() => router.push('/explore')}>
+        onPress={() => router.push('../scheduling/agenda-do-profissional')}>
         <PlusIcon size={18} color={Colors.white} />
         <Text style={[styles.newBookingText, { fontFamily: fontSemiBold }]}>
           Novo Agendamento

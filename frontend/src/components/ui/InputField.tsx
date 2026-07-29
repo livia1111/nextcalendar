@@ -1,11 +1,3 @@
-/**
- * Campo de input com label, usado em todos os formulários do app.
- *
- * @example
- * <InputField label="Email" value={email} onChangeText={setEmail} placeholder="seu@email.com" keyboardType="email-address" />
- * <InputField label="Senha" value={pw} onChangeText={setPw} secureTextEntry />
- */
-
 import { useState } from 'react';
 import {
   KeyboardTypeOptions,
@@ -30,6 +22,7 @@ interface InputFieldProps {
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   style?: ViewStyle;
   editable?: boolean;
+  pointerEvents?: 'auto' | 'none' | 'box-none' | 'box-only'; // <- adiciona aqui
 }
 
 export function InputField({
@@ -42,12 +35,13 @@ export function InputField({
   autoCapitalize = 'none',
   style,
   editable = true,
+  pointerEvents, // <- extrai aqui
 }: InputFieldProps) {
   const { fontRegular, fontSemiBold } = useAppFonts();
   const [passwordVisible, setPasswordVisible] = useState(false);
 
   return (
-    <View style={[styles.group, style]}>
+    <View style={[styles.group, style]} pointerEvents={pointerEvents}>
       <Text style={[styles.label, { fontFamily: fontSemiBold }]}>{label}</Text>
       <View style={styles.wrapper}>
         <TextInput
@@ -73,7 +67,6 @@ export function InputField({
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   group: {
     gap: 6,

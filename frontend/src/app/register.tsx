@@ -9,6 +9,7 @@ import { InputField } from '@/components/ui/InputField';
 import { Colors } from '@/constants/colors';
 import { useAppFonts } from '@/hooks/use-fonts';
 import { useAuth } from '@/context/AuthContext';
+import DateTimePicker from '@react-native-community/datetimepicker'
 
 export default function RegisterScreen() {
   const { fontRegular, fontSemiBold } = useAppFonts();
@@ -23,11 +24,18 @@ export default function RegisterScreen() {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [dateOfBirth, setDateOfBirth] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
   async function handleRegister() {
     setError('');
     setIsSubmitting(true);
     try {
-      await signUp({ name, email, password, phone });
+      await signUp({ name,
+        email, 
+        password,
+        phone,
+        dateOfBirth:dateOfBirth?.toISOString().split('T')[0]?? '' });
       router.push('/(tabs)/home' as any);
     } catch (err: any) {
       setError(err?.message ?? 'Erro ao criar conta. Tente novamente.');
@@ -58,6 +66,29 @@ export default function RegisterScreen() {
         <View style={styles.form}>
           <InputField label="Nome completo" value={name} onChangeText={setName} placeholder="Seu nome completo" autoCapitalize="words" />
           <InputField label="Email" value={email} onChangeText={setEmail} placeholder="seu@email.com" keyboardType="email-address" />
+          <TouchableOpacity onPress={() => setShowDatePicker(true)}>
+          <InputField
+            label="Data de nascimento"
+            value={dateOfBirth ? dateOfBirth.toLocaleDateString('pt-BR') : ''}
+            placeholder="00/00/0000"
+            editable={false}
+            pointerEvents="none"
+            onChangeText={()=> {}}
+          />
+        </TouchableOpacity>
+
+        {showDatePicker && (
+          <DateTimePicker
+            value={dateOfBirth ?? new Date(2000, 0, 1)}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            maximumDate={new Date()}
+            onChange={(event, selectedDate) => {
+              setShowDatePicker(Platform.OS === 'ios');
+              if (selectedDate) setDateOfBirth(selectedDate);
+            }}
+    />
+)}
           <InputField label="Número de telefone" value={phone} onChangeText={setPhone} placeholder="(00) 00000-0000" keyboardType="phone-pad" />
           <InputField label="Senha" value={password} onChangeText={setPassword} placeholder="••••••••••••" secureTextEntry />
         </View>

@@ -9,11 +9,12 @@ type LoginResponse = {
   };
 };
 
-type RegisterPayload = {
+export type RegisterPayload = {
   name:string;
   email:string;
   password:string;
   phone?:string;
+  dateOfBirth:string;
 }
 
 type RegisterResponse = {

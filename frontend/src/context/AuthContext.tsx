@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import * as SecureStore from 'expo-secure-store';
-import { login as loginService, register as registerService } from '../services/authServices';
+import { login as loginService, register as registerService, RegisterPayload } from '../services/authServices';
 
 type User = {
   id: string;
@@ -8,11 +8,6 @@ type User = {
   email: string;
 };
 
-type RegisterPayload = {
-  name: string;
-  email: string;
-  password: string;
-};
 
 type AuthContextType = {
   user: User | null;
@@ -28,14 +23,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    SecureStore.getItemAsync('authToken').then((token) => {
+ // useEffect(() => {
+    //SecureStore.getItemAsync('authToken').then((token) => {
       // TODO: quando a API estiver pronta, validar esse token com o backend
       // e restaurar o usuário (setUser) se for válido.
       // Por enquanto, só libera a tela sem restaurar sessão.
-      setIsLoading(false);
-    });
-  }, []);
+    //setIsLoading(false);
+   // });
+  //}, []);
 
   async function signIn(email: string, password: string) {
     const { token, user } = await loginService(email, password);

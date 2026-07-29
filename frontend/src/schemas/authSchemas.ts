@@ -13,7 +13,9 @@ export const RegisterSchema = z.object({
     .min(8,'Mínimo 8 caracteres')
     .regex(/[A-Z]/, 'Precisa de ao menos 1 letra maiúscula')
     .regex(/[0-9]/, 'Precisa de ao menos 1 número'),
-    dateOfBirth: z.coerce.date(),
+    dateOfBirth: z.string().refine((date)=> !isNaN(Date.parse(date)),{
+        message:"Data de nascimento inválida",
+    })
 })
 
 export type LoginInput =  z.infer<typeof LoginSchema>;

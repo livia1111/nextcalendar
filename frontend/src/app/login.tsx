@@ -25,14 +25,18 @@ export default function LoginScreen() {
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { signIn  } = useAuth();
-
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   async function handleLogin(){
   const result = LoginSchema.safeParse({email,password})
 
   if(!result.success){
-    const firstError = result.error.issues[0].message
-    setError(firstError)
+    const errors: Record<string,string> ={};
+    result.error.issues.forEach((issue)=>{
+      const field = issue.path[0] as string;
+      if (!errors[field]) errors[field] = issue.message;
+    })
+    setFieldErrors(errors)
     return
   }
 
@@ -60,7 +64,7 @@ export default function LoginScreen() {
 
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.title, { fontFamily: fontSemiBold }]}>Bem-vindo de volta! 👋</Text>
+          <Text style={[styles.title, { fontFamily: fontSemiBold }]}>Bem-vindo! </Text>
           <Text style={[styles.subtitle, { fontFamily: fontRegular }]}>
             Conecte-se aos serviços que você precisa com facilidade
           </Text>
@@ -69,7 +73,9 @@ export default function LoginScreen() {
         {/* Form */}
         <View style={styles.form}>
           <InputField label="Email" value={email} onChangeText={setEmail} placeholder="Digite seu E-mail" keyboardType="email-address" />
+           {fieldErrors.email && <Text style={styles.fieldError}>{fieldErrors.email}</Text>}
           <InputField label="Senha" value={password} onChangeText={setPassword} placeholder="Digite sua senha" secureTextEntry />
+           {fieldErrors.password && <Text style={styles.fieldError}>{fieldErrors.password}</Text>}
 
           <TouchableOpacity style={styles.forgotRow} activeOpacity={0.7} onPress={() => router.push('/forgot-password' as any)}>
             <Text style={[styles.forgotText, { fontFamily: fontSemiBold }]}>Esqueceu a senha?</Text>
@@ -77,7 +83,7 @@ export default function LoginScreen() {
         </View>
 
         <Button label={isSubmitting ? 'Entrando...' : 'Entrar'} onPress={handleLogin} disabled={isSubmitting}/>
-        {error ? <Text style={styles.errorText}></Text>:null}
+        
 
         <Divider />
 
@@ -114,5 +120,11 @@ const styles = StyleSheet.create({
   registerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   registerText: { color: Colors.grey400, fontSize: 14, lineHeight: 21.7, letterSpacing: -0.28 },
   registerLink: { color: Colors.gold, fontSize: 14, lineHeight: 21.7, letterSpacing: -0.28, fontWeight: '600' },
-  errorText: { color: '#E53935', fontSize: 13, letterSpacing: -0.28 },
+  errorText: { color: '#E53935', fontSize: 13, letterSpacing: -0.28 , fontWeight:'bold'},
+    fieldError: {
+  color: '#D64545',
+  fontSize: 12,
+  marginTop: -8, 
+  fontWeight:'bold',
+},
 });

@@ -10,6 +10,7 @@ import { Colors } from '@/constants/colors';
 import { useAppFonts } from '@/hooks/use-fonts';
 import { useAuth } from '@/context/AuthContext';
 import DateTimePicker from '@react-native-community/datetimepicker'
+import { RegisterSchema } from '@/schemas/authSchemas';
 
 export default function RegisterScreen() {
   const { fontRegular, fontSemiBold } = useAppFonts();
@@ -27,15 +28,33 @@ export default function RegisterScreen() {
   const [dateOfBirth, setDateOfBirth] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
   async function handleRegister() {
     setError('');
+
+const result = RegisterSchema.safeParse({
+  name,
+  email,
+  phone:phone.replace(/\D/g, ''),
+  password,
+  dateOfBirth:dateOfBirth?.toISOString().split('T')[0] ?? ''
+})
+
+
+  if(!result.success){
+    const errors: Record<string,string> ={};
+    result.error.issues.forEach((issue)=>{
+      const field = issue.path[0] as string;
+      if (!errors[field]) errors[field] = issue.message;
+    })
+    setFieldErrors(errors);
+    return
+  }
+
     setIsSubmitting(true);
     try {
-      await signUp({ name,
-        email, 
-        password,
-        phone,
-        dateOfBirth:dateOfBirth?.toISOString().split('T')[0]?? '' });
+      await signUp(result.data)
       router.push('/(tabs)/home' as any);
     } catch (err: any) {
       setError(err?.message ?? 'Erro ao criar conta. Tente novamente.');
@@ -65,7 +84,11 @@ export default function RegisterScreen() {
 
         <View style={styles.form}>
           <InputField label="Nome completo" value={name} onChangeText={setName} placeholder="Seu nome completo" autoCapitalize="words" />
+          {fieldErrors.name && <Text style={styles.fieldError}>{fieldErrors.name}</Text>}
+
           <InputField label="Email" value={email} onChangeText={setEmail} placeholder="seu@email.com" keyboardType="email-address" />
+          {fieldErrors.email && <Text style={styles.fieldError}>{fieldErrors.email}</Text>}
+
           <TouchableOpacity onPress={() => setShowDatePicker(true)}>
           <InputField
             label="Data de nascimento"
@@ -76,6 +99,7 @@ export default function RegisterScreen() {
             onChangeText={()=> {}}
           />
         </TouchableOpacity>
+        {fieldErrors.dateOfBirth && <Text style={styles.fieldError}>{fieldErrors.dateOfBirth}</Text>}
 
         {showDatePicker && (
           <DateTimePicker
@@ -90,10 +114,13 @@ export default function RegisterScreen() {
     />
 )}
           <InputField label="Número de telefone" value={phone} onChangeText={setPhone} placeholder="(00) 00000-0000" keyboardType="phone-pad" />
+          {fieldErrors.phone && <Text style={styles.fieldError}>{fieldErrors.phone}</Text>}
+
+
           <InputField label="Senha" value={password} onChangeText={setPassword} placeholder="••••••••••••" secureTextEntry />
+          {fieldErrors.password && <Text style={styles.fieldError}>{fieldErrors.password}</Text>}
         </View>
 
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
         <Button label={isSubmitting ? 'Criando conta...' : 'Criar conta'} onPress={handleRegister} disabled={isSubmitting} />
 
@@ -121,4 +148,10 @@ const styles = StyleSheet.create({
   loginRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   loginText: { color: Colors.grey400, fontSize: 14, lineHeight: 21.7, letterSpacing: -0.28 },
   loginLink: { color: Colors.gold, fontSize: 14, lineHeight: 21.7, letterSpacing: -0.28, fontWeight: '600' },
+  fieldError: {
+  color: '#D64545',
+  fontSize: 12,
+  marginTop: -8, 
+  fontWeight:'bold',
+},
 });

@@ -95,5 +95,6 @@ const styles = StyleSheet.create({
     lineHeight: 25.6,
     letterSpacing: -0.32,
     padding: 0,
+    outlineStyle:'none'
   },
 });

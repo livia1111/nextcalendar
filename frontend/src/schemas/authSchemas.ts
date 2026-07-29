@@ -6,7 +6,7 @@ export const LoginSchema = z.object({
 });
 
 export const RegisterSchema = z.object({
-    name:z.string().min(3,'nome muito curto'),
+    name:z.string().min(3,'Nome muito curto'),
     email:z.email('Email inválido'),
     phone:z.string().regex(/^\d{10,11}$/,'Telefone inválido(DDD + número)'),
     password:z.string()
@@ -15,6 +15,8 @@ export const RegisterSchema = z.object({
     .regex(/[0-9]/, 'Precisa de ao menos 1 número'),
     dateOfBirth: z.string().refine((date)=> !isNaN(Date.parse(date)),{
         message:"Data de nascimento inválida",
+    }).refine((date)=> new Date(date) <= new Date(),{
+        message:"Data de nascimento não pode ser no futuro"
     })
 })
 

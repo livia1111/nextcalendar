@@ -7,6 +7,7 @@ import com.nextcalendar.dto.appointment.AvailableSlotsResponseDTO;
 import com.nextcalendar.entity.*;
 import com.nextcalendar.exception.BusinessException;
 import com.nextcalendar.exception.EntityNotFoundException;
+import com.nextcalendar.mapper.AppointmentMapper;
 import com.nextcalendar.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,20 +31,22 @@ public class AppointmentService {
     private final ProfessionalRepository professionalRepository;
     private final ServiceRepository serviceRepository;
     private final ClientRepository clientRepository;
+    private final AppointmentMapper appointmentMapper;
 
     public AppointmentService(AppointmentRepository appointmentRepository,
                               WorkingHoursRepository workingHoursRepository,
                               BlockedTimeRepository blockedTimeRepository,
                               ProfessionalRepository professionalRepository,
                               ServiceRepository serviceRepository,
-                              ClientRepository clientRepository)
-    {
+                              ClientRepository clientRepository,
+                              AppointmentMapper appointmentMapper) {
         this.appointmentRepository = appointmentRepository;
         this.workingHoursRepository = workingHoursRepository;
         this.blockedTimeRepository = blockedTimeRepository;
         this.professionalRepository = professionalRepository;
         this.serviceRepository = serviceRepository;
         this.clientRepository = clientRepository;
+        this.appointmentMapper = appointmentMapper;
     }
 
     private ProfessionalEntity findProfessional(UUID professionalId, UUID establishmentId) {
@@ -71,13 +74,11 @@ public class AppointmentService {
                 .orElseThrow(() -> new BusinessException("O profissional não atende neste dia da semana."));
     }
 
-
     @Transactional(readOnly = true)
     public AvailableSlotsResponseDTO findAvailableSlots(UUID establishmentId, UUID professionalId, UUID serviceId, LocalDate date) {
 
         ProfessionalEntity professional = findProfessional(professionalId, establishmentId);
         ServiceEntity service = findService(serviceId, professional.getEstablishment());
-
         WorkingHoursEntity workingHours = findWorkingHoursOrThrow(professionalId, date.getDayOfWeek());
 
         int durationMinutes = service.getDuration();
@@ -130,6 +131,8 @@ public class AppointmentService {
         ProfessionalEntity professional = findProfessional(dto.professionalId(), establishmentId);
         ServiceEntity service = findService(dto.serviceId(), professional.getEstablishment());
 
+        ClientEntity client = dto.clientId() != null ? findClient(dto.clientId()) : null;
+
         LocalDateTime start = dto.startDateTime();
         LocalDateTime end = start.plusMinutes(service.getDuration());
 
@@ -139,24 +142,14 @@ public class AppointmentService {
             validateAvailability(dto.professionalId(), start, end, null);
         }
 
-        AppointmentEntity appointment = new AppointmentEntity();
-        appointment.setEstablishment(professional.getEstablishment());
-        appointment.setProfessional(professional);
-        appointment.setService(service);
+        AppointmentEntity appointment = appointmentMapper.toEntity(dto, professional, service, client);
         appointment.setStartDateTime(start);
         appointment.setEndDateTime(end);
         appointment.setStatus(AppointmentStatus.SCHEDULED);
         appointment.setFitIn(isFitIn);
-        appointment.setNotes(dto.notes());
-        appointment.setClientNameFallback(dto.clientNameFallback());
-        appointment.setClientPhoneFallback(dto.clientPhoneFallback());
-
-        if (dto.clientId() != null) {
-            appointment.setClient(findClient(dto.clientId()));
-        }
 
         AppointmentEntity saved = appointmentRepository.save(appointment);
-        return new AppointmentResponseDTO(saved);
+        return appointmentMapper.toResponseDTO(saved);
     }
 
     @Transactional
@@ -176,7 +169,7 @@ public class AppointmentService {
 
         appointment.setStatus(AppointmentStatus.CANCELLED);
         AppointmentEntity saved = appointmentRepository.save(appointment);
-        return new AppointmentResponseDTO(saved);
+        return appointmentMapper.toResponseDTO(saved);
     }
 
     @Transactional
@@ -199,14 +192,14 @@ public class AppointmentService {
         appointment.setStatus(AppointmentStatus.SCHEDULED);
 
         AppointmentEntity saved = appointmentRepository.save(appointment);
-        return new AppointmentResponseDTO(saved);
+        return appointmentMapper.toResponseDTO(saved);
     }
 
     @Transactional(readOnly = true)
     public List<AppointmentResponseDTO> findByClient(UUID clientId) {
         return appointmentRepository.findByClientIdOrderByStartDateTimeDesc(clientId)
                 .stream()
-                .map(AppointmentResponseDTO::new)
+                .map(appointmentMapper::toResponseDTO)
                 .toList();
     }
 

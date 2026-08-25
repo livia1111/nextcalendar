@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "Barbearia",
+    "slug": "frontend-barbearia",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "barbearia",
+    "userInterfaceStyle": "dark",
+    "icon": "./assets/icon.png",
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#000000"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

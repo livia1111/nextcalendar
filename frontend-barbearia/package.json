@@ -1,0 +1,30 @@
+{
+  "name": "frontend-barbearia",
+  "version": "1.0.0",
+  "main": "expo-router/entry",
+  "dependencies": {
+    "@expo/metro-runtime": "^57.0.13",
+    "expo": "~57.0.16",
+    "expo-constants": "^57.0.14",
+    "expo-linking": "^57.0.7",
+    "expo-router": "^57.0.16",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.86.2",
+    "react-native-safe-area-context": "^5.9.1",
+    "react-native-screens": "^4.27.0",
+    "react-native-web": "^0.21.2"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "typescript": "~6.0.3"
+  },
+  "scripts": {
+    "start": "expo start --port 8085",
+    "android": "expo start --android --port 8085",
+    "ios": "expo start --ios --port 8085",
+    "web": "expo start --web --port 8085"
+  },
+  "private": true
+}

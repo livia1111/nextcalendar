@@ -22,8 +22,6 @@ import java.util.UUID;
 public class ServiceService {
     private final ServiceRepository serviceRepository;
 
-    //temporário enquanto não há login implentado, para cadastrar serviço precisa do ID do estabelecimento
-    //quando tiver login apenas substituir pelo establichmentEntity pelo usuário autenticado.
     private final EstablishmentRepository establishmentRepository;
 
     private final ServiceMapper serviceMapper;
@@ -34,7 +32,6 @@ public class ServiceService {
         this.serviceMapper = serviceMapper;
     }
 
-    //função auxiliar
     private EstablishmentEntity findEstablishment(UUID establishmentId) {
         return establishmentRepository.findById(establishmentId)
                 .orElseThrow(() -> new EntityNotFoundException("Estabelecimento", establishmentId));
@@ -42,7 +39,6 @@ public class ServiceService {
 
     @Transactional
     public ServiceMinResponseDTO createService(UUID establishmentId, ServiceCreateDTO serviceDTO){
-        //temporário enquanto não há login
         EstablishmentEntity establishment = findEstablishment(establishmentId);
 
         if(serviceRepository.existsByNameAndEstablishmentAndActiveTrue(serviceDTO.name(),establishment)){

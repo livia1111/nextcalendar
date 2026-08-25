@@ -28,6 +28,23 @@ public interface AppointmentRepository extends JpaRepository<AppointmentEntity, 
             @Param("endDateTime") LocalDateTime endDateTime
     );
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        SELECT a FROM AppointmentEntity a
+        WHERE a.professional.id = :professionalId
+          AND a.id <> :excludeAppointmentId
+          AND a.status <> :excludedStatus
+          AND a.startDateTime < :endDateTime
+          AND a.endDateTime > :startDateTime
+        """)
+    List<AppointmentEntity> findOverlappingExcludingSelf(
+            @Param("professionalId") UUID professionalId,
+            @Param("excludeAppointmentId") UUID excludeAppointmentId,
+            @Param("excludedStatus") AppointmentStatus excludedStatus,
+            @Param("startDateTime") LocalDateTime startDateTime,
+            @Param("endDateTime") LocalDateTime endDateTime
+    );
+
     List<AppointmentEntity> findByProfessionalIdAndStartDateTimeBetween(
             UUID professionalId, LocalDateTime start, LocalDateTime end);
 

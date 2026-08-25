@@ -98,6 +98,12 @@ public class ClientService {
         return new ClientDetailsResponseDTO(client);
     }
 
+    @Transactional(readOnly = true)
+    public ClientDetailsResponseDTO findByUserId(UUID userId) {
+        ClientEntity client = clientRepository.findByUserId(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Cliente para o usuário", userId));
+        return new ClientDetailsResponseDTO(client);
+    }
 
     @Transactional(readOnly = true)
     public Page<ClientMinResponseDTO> findClientsByName(String name, Pageable pageable){

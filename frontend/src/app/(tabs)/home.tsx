@@ -4,6 +4,7 @@
  * Dados carregados do backend:
  *  1. Agendamentos do cliente → getMyBookings()  [bookingServices.ts]
  *  2. Serviços do tenant      → getServices()    [serviceServices.ts]
+ *  3. Profissionais ativos    → useProfessional() [hooks/useProfessionals.ts]
  *
  * TODO: Quando o vínculo cliente↔tenant estiver definido,
  *       substituir `currentTenantId = user?.id` pelo tenantId real
@@ -28,9 +29,11 @@ import { BellIcon, LocationPinIcon } from '@/components/icons';
 import { NextBookingCard } from '@/components/ui/NextBookingCard';
 import { LoyaltyCard } from '@/components/ui/LoyaltyCard';
 import { ServicesList } from '@/components/ui/ServicesList';
+import { QuickBookingSection } from '@/components/ui/QuickBookingSection';
 import { Colors } from '@/constants/colors';
 import { useAppFonts } from '@/hooks/use-fonts';
 import { useAuth } from '@/context/AuthContext';
+import { useProfessional } from '@/hooks/useProfessionals';
 
 import { getMyBookings, type Booking } from '@/services/bookingServices';
 import { getServices, type ServiceResponse } from '@/services/serviceServices';
@@ -52,10 +55,19 @@ export default function HomeScreen() {
   // ── Estado: Serviços do Tenant ───────────────────────────────────────────
   const [services, setServices] = useState<ServiceResponse[]>([]);
 
+  // ── Estado: Profissional selecionado para agendamento rápido ─────────────
+  const [selectedProfessionalId, setSelectedProfessionalId] = useState<string | null>(null);
+
   // TODO: substituir pelo tenantId real quando o vínculo cliente↔tenant estiver definido
   const currentTenantId = user?.id ?? '';
   // TODO: buscar o nome real do estabelecimento via API (ex: getEstablishmentByOwner)
   const tenantName = 'Estabelecimento';
+
+  // ── Profissionais ativos do estabelecimento (dados reais do backend) ──────
+  const {
+    professionals,
+    loading: loadingProfessionals,
+  } = useProfessional(currentTenantId);
 
   // ── Carregamento de dados ────────────────────────────────────────────────
   async function loadHomeData() {
@@ -174,7 +186,21 @@ export default function HomeScreen() {
           rewardDescription="1 Corte Grátis ou Tratos VIP"
         />
 
-        {/* 3. Catálogo de Serviços do Estabelecimento */}
+        {/* 3. Agendamento Rápido — profissionais ativos vindos do backend */}
+        {loadingProfessionals ? (
+          <View style={styles.profLoadingBox}>
+            <ActivityIndicator size="small" color={Colors.gold} />
+          </View>
+        ) : (
+          <QuickBookingSection
+            professionals={professionals}
+            selectedProfessionalId={selectedProfessionalId}
+            onSelectProfessional={setSelectedProfessionalId}
+            onStartBooking={handleStartBooking}
+          />
+        )}
+
+        {/* 4. Catálogo de Serviços do Estabelecimento */}
         <ServicesList
           services={services}
           onSelectService={() => handleStartBooking()}
@@ -190,6 +216,13 @@ const styles = StyleSheet.create({
   loadingContainer: { flex: 1, backgroundColor: Colors.white },
   scroll: { flex: 1 },
   content: { paddingHorizontal: 20, paddingTop: 20, gap: 20 },
+  profLoadingBox: {
+    height: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+  },
 
   // Header
   headerContainer: {

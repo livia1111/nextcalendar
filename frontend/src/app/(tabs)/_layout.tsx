@@ -1,6 +1,6 @@
 import { Tabs, useRouter } from 'expo-router';
 import { ColorValue, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { ExploreTabIcon, HomeTabIcon, MessageTabIcon, QRTabIcon, UserTabIcon } from '@/components/icons';
+import { ExploreTabIcon, HomeTabIcon, MessageTabIcon, CalendarTabIcon, UserTabIcon } from '@/components/icons';
 import { Colors } from '@/constants/colors';
 
 interface TabBarIconProps {
@@ -41,7 +41,7 @@ export default function TabLayout() {
         name="search"
         options={{ href: null }}
       />
-      {/* Central QR Button */}
+      {/* Central calendar Button */}
       <Tabs.Screen
         name="booking-tab"
         options={{
@@ -52,7 +52,7 @@ export default function TabLayout() {
               style={styles.centerButton}
               activeOpacity={0.9}>
               <View style={styles.centerInner}>
-                <QRTabIcon size={26} />
+                <CalendarTabIcon size={26} />
               </View>
             </TouchableOpacity>
           ),

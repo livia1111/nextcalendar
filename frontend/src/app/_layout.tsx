@@ -40,6 +40,7 @@ function RootLayoutNav() {
       {/* Detail screens */}
       <Stack.Screen name="booking" />
       <Stack.Screen name="empresa" />
+      <Stack.Screen name="empresa-home" />
     </Stack>
   );
 }

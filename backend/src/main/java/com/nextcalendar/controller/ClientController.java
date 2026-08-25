@@ -33,6 +33,9 @@ public class ClientController implements ClientApi {
     @GetMapping("/{id}")
     public ClientDetailsResponseDTO findClientById(@PathVariable UUID id){return clientService.findClientById(id);}
 
+    @GetMapping("/by-user/{userId}")
+    public ClientDetailsResponseDTO findByUserId(@PathVariable UUID userId) {return clientService.findByUserId(userId);}
+
     @Override
     @GetMapping("/search")
     public Page<ClientMinResponseDTO> findClientsByName(@RequestParam(defaultValue = "") String name, @ParameterObject Pageable pageable){return clientService.findClientsByName(name, pageable);}

@@ -1,5 +1,6 @@
 package com.nextcalendar.controller;
 
+import com.nextcalendar.controller.openapi.AppointmentApi;
 import com.nextcalendar.dto.appointment.AppointmentCreateDTO;
 import com.nextcalendar.dto.appointment.AppointmentRescheduleDTO;
 import com.nextcalendar.dto.appointment.AppointmentResponseDTO;
@@ -16,7 +17,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/establishments/{establishmentId}/appointments")
-public class AppointmentController {
+public class AppointmentController implements AppointmentApi {
 
     private final AppointmentService appointmentService;
 

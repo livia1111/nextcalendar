@@ -1,5 +1,6 @@
 package com.nextcalendar.controller;
 
+import com.nextcalendar.controller.openapi.WorkingHoursApi;
 import com.nextcalendar.dto.appointment.WorkingHoursCreateDTO;
 import com.nextcalendar.dto.appointment.WorkingHoursResponseDTO;
 import com.nextcalendar.dto.appointment.WorkingHoursUpdateDTO;
@@ -13,7 +14,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/establishments/{establishmentId}/professionals/{professionalId}/working-hours")
-public class WorkingHoursController {
+public class WorkingHoursController implements WorkingHoursApi {
     private final WorkingHoursService workingHoursService;
 
     public WorkingHoursController(WorkingHoursService workingHoursService) {

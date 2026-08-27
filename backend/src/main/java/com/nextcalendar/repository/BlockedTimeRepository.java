@@ -11,4 +11,6 @@ public interface BlockedTimeRepository extends JpaRepository<BlockedTimeEntity, 
 
     List<BlockedTimeEntity> findByProfessionalIdAndStartDateTimeLessThanAndEndDateTimeGreaterThan(
             UUID professionalId, LocalDateTime endDateTime, LocalDateTime startDateTime);
+
+    List<BlockedTimeEntity> findByProfessionalIdOrderByStartDateTimeAsc(UUID professionalId);
 }

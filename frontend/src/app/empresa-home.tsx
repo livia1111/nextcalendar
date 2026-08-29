@@ -16,6 +16,7 @@ import { ProfessionalTimeline } from '@/components/admin/ProfessionalTimeline';
 import { AddProfessionalModal } from '@/components/admin/AddProfessionalModal';
 import { ServiceSelector } from '@/components/admin/ServiceSelector';
 import { AddServiceModal } from '@/components/admin/AddServiceModal';
+import { EditServiceModal } from '@/components/admin/EditServiceModal';
 
 import { Colors } from '@/constants/colors';
 import { useAuth } from '@/context/AuthContext';
@@ -27,8 +28,11 @@ import {
 import {
   getServices,
   createService,
+  updateService,
+  deleteService,
   type ServiceResponse,
   type ServiceCreatePayload,
+  type ServiceUpdatePayload,
 } from '@/services/serviceServices';
 import {
   getAgendaByDate,
@@ -65,6 +69,7 @@ export default function EmpresaHomeScreen() {
   const [loadingServices, setLoadingServices] = useState(false);
   const [errorServices, setErrorServices] = useState(false);
   const [serviceModalVisible, setServiceModalVisible] = useState(false);
+  const [editingService, setEditingService] = useState<ServiceResponse | null>(null);
 
   // Agenda / Timeline
   const [selectedDate, setSelectedDate] = useState<string>(() => {
@@ -178,6 +183,27 @@ export default function EmpresaHomeScreen() {
     }
   }
 
+  async function handleUpdateService(serviceId: string, input: ServiceUpdatePayload) {
+    const targetEstId = establishmentId || user?.id || '';
+    if (!targetEstId) {
+      Alert.alert('Erro', 'Estabelecimento não encontrado. Tente novamente.');
+      return;
+    }
+    await updateService(targetEstId, serviceId, input);
+    Alert.alert('Sucesso', 'Serviço atualizado com sucesso!');
+    await loadServices(targetEstId);
+  }
+
+  async function handleDeleteService(serviceId: string) {
+    const targetEstId = establishmentId || user?.id || '';
+    if (!targetEstId) {
+      Alert.alert('Erro', 'Estabelecimento não encontrado. Tente novamente.');
+      return;
+    }
+    await deleteService(targetEstId, serviceId);
+    await loadServices(targetEstId);
+  }
+
   // ─── Ação no Slot ────────────────────────────────────────────────────────
   function handleSelectSlot(slot: AgendaSlot) {
     if (slot.status === 'confirmed') {
@@ -278,6 +304,7 @@ export default function EmpresaHomeScreen() {
         <ServiceSelector
           services={services}
           onAddPress={() => setServiceModalVisible(true)}
+          onSelectService={(service) => setEditingService(service)}
           isLoading={loadingServices}
           hasError={errorServices}
         />
@@ -304,6 +331,15 @@ export default function EmpresaHomeScreen() {
         visible={serviceModalVisible}
         onClose={() => setServiceModalVisible(false)}
         onSubmit={handleCreateService}
+      />
+
+      {/* Modal de Edição/Exclusão de Serviço */}
+      <EditServiceModal
+        visible={!!editingService}
+        service={editingService}
+        onClose={() => setEditingService(null)}
+        onSubmit={handleUpdateService}
+        onDelete={handleDeleteService}
       />
     </View>
   );

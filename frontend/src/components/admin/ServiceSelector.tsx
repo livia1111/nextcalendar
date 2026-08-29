@@ -7,6 +7,7 @@ import { ServiceResponse } from '@/services/serviceServices';
 interface ServiceSelectorProps {
   services: ServiceResponse[];
   onAddPress: () => void;
+  onSelectService?: (service: ServiceResponse) => void;
   /** Exibe indicador de carregamento enquanto a lista é buscada */
   isLoading?: boolean;
   /** Exibe mensagem de erro se a busca falhar */
@@ -20,6 +21,7 @@ function formatPrice(value: number) {
 export function ServiceSelector({
   services,
   onAddPress,
+  onSelectService,
   isLoading = false,
   hasError = false,
 }: ServiceSelectorProps) {
@@ -75,12 +77,18 @@ export function ServiceSelector({
 
       {/* Lista de serviços */}
       {!isLoading && !hasError && services.length > 0 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}>
+        <>
+          <Text style={[styles.hint, { fontFamily: fontRegular }]}>Toque em um serviço para editar</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}>
           {services.map((item) => (
-            <View key={item.id} style={styles.card}>
+            <TouchableOpacity
+              key={item.id}
+              style={styles.card}
+              activeOpacity={0.7}
+              onPress={() => onSelectService?.(item)}>
               <Text style={[styles.name, { fontFamily: fontSemiBold }]} numberOfLines={1}>
                 {item.name}
               </Text>
@@ -95,9 +103,10 @@ export function ServiceSelector({
                   {item.duration} min
                 </Text>
               </View>
-            </View>
+            </TouchableOpacity>
           ))}
         </ScrollView>
+        </>
       )}
     </View>
   );
@@ -154,6 +163,11 @@ const styles = StyleSheet.create({
     color: Colors.grey400,
     fontSize: 13,
     textAlign: 'center',
+  },
+  hint: {
+    color: Colors.grey400,
+    fontSize: 11,
+    paddingHorizontal: 20,
   },
   errorText: {
     color: Colors.error,

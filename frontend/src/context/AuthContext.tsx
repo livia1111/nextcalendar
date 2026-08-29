@@ -17,13 +17,14 @@ type User = {
   id: string;
   name: string;
   email: string;
+  role: 'CUSTOMER' | 'MANAGER' | 'PROFESSIONAL';
 };
 
 type AuthContextType = {
   user: User | null;
   token: string | null;
   isLoading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<User>;
   signOut: () => Promise<void>;
 };
 
@@ -55,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await setStorageItemAsync('authUser', JSON.stringify(newUser));
       setToken(newToken);
       setUser(newUser);
+      return newUser;
     } catch (err: unknown) {
       throw new Error(
         extractBackendMessage(err, 'Não foi possível entrar. Tente novamente.')

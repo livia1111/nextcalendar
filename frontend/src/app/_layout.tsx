@@ -17,8 +17,12 @@ function RootLayoutNav() {
       // Não está logado e tentou acessar área restrita
       router.replace('/login');
     } else if (user && inAuthGroup) {
-      // Está logado e tentou acessar login/register
-      router.replace('/(tabs)/home');
+      // Está logado e tentou acessar login/register — manda para a home certa do perfil
+      if (user.role === 'MANAGER') {
+        router.replace('/empresa-home');
+      } else {
+        router.replace('/(tabs)/home');
+      }
     }
   }, [user, isLoading, segments]);
 
@@ -53,4 +57,4 @@ export default function RootLayout() {
     </AuthProvider>
   );
 }
-
+

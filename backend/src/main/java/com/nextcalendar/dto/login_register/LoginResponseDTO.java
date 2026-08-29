@@ -1,5 +1,7 @@
 package com.nextcalendar.dto.login_register;
 
+import com.nextcalendar.entity.UserRole;
+
 import java.util.UUID;
 
 /**
@@ -17,6 +19,7 @@ public record LoginResponseDTO(
     public record UserInfoDTO(
             UUID id,
             String name,
-            String email
+            String email,
+            UserRole role
     ) {}
 }

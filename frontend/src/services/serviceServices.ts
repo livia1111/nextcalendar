@@ -1,103 +1,151 @@
-import api from './api';
+import { API_BASE_URL } from './api';
 
-// ─── Tipos ────────────────────────────────────────────────────────────────────
+// ─── Tipos ─────────────────────────────────────────────────────────────────────
 
-export type ServiceResponse = {
+export interface ServiceCreatePayload {
+  name: string;
+  price: number;
+  duration: number;
+  category: string;
+}
+
+export interface ServiceResponse {
   id: string;
   name: string;
   price: number;
-  duration: number; // em minutos
-  category: string;
-};
-
-export type ServiceCreatePayload = {
-  name: string;
-  price: number;
   duration: number;
   category: string;
-};
-
-export type ServiceUpdatePayload = {
-  name: string;
-  price: number;
-  duration: number;
-};
-
-// Resposta paginada do Spring (Page<ServiceMinResponseDTO>)
-export type PageResponse<T> = {
-  content: T[];
-  totalElements: number;
-  totalPages: number;
-  number: number;   // página atual (0-indexed)
-  size: number;
-};
-
-// ─── GET /api/v1/establishments/{establishmentId}/services ────────────────────
-// Lista todos os serviços de um estabelecimento (paginado)
-
-export async function getServices(
-  establishmentId: string,
-  page = 0,
-  size = 20
-): Promise<PageResponse<ServiceResponse>> {
-  const { data } = await api.get<PageResponse<ServiceResponse>>(
-    `/establishments/${establishmentId}/services`,
-    { params: { page, size } }
-  );
-  return data;
 }
 
-// ─── GET /api/v1/establishments/{establishmentId}/services/search ─────────────
-// Busca serviços por nome
+// ─── Listar serviços ───────────────────────────────────────────────────────────
 
-export async function searchServices(
+export async function listarServicos(
   establishmentId: string,
-  name: string,
-  page = 0,
-  size = 20
-): Promise<PageResponse<ServiceResponse>> {
-  const { data } = await api.get<PageResponse<ServiceResponse>>(
-    `/establishments/${establishmentId}/services/search`,
-    { params: { name, page, size } }
-  );
-  return data;
+): Promise<ServiceResponse[]> {
+  const url = `${API_BASE_URL}/api/v1/establishments/${establishmentId}/services?size=100`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    const erro = await response.text();
+    throw new Error(`Erro ao listar serviços [${response.status}]: ${erro}`);
+  }
+
+  const data = await response.json();
+  // O backend retorna Page<ServiceMinResponseDTO> — extraímos o array content
+  return data.content ?? data;
 }
 
-// ─── POST /api/v1/establishments/{establishmentId}/services ───────────────────
-// Cria um novo serviço
+// ─── Listar serviços (formato paginado) ────────────────────────────────────────
+// Usado por telas que esperam a página inteira (ex: home.tsx, empresa-home.tsx)
 
-export async function createService(
+export interface ServicePage {
+  content: ServiceResponse[];
+  totalElements?: number;
+  totalPages?: number;
+  number?: number;
+  size?: number;
+}
+
+export async function getServices(establishmentId: string): Promise<ServicePage> {
+  const url = `${API_BASE_URL}/api/v1/establishments/${establishmentId}/services?size=100`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    const erro = await response.text();
+    throw new Error(`Erro ao listar serviços [${response.status}]: ${erro}`);
+  }
+
+  const data = await response.json();
+  // Garante o formato paginado mesmo se a API responder um array puro
+  return Array.isArray(data) ? { content: data } : data;
+}
+
+// ─── Criar serviço ─────────────────────────────────────────────────────────────
+
+export async function criarServico(
   establishmentId: string,
-  payload: ServiceCreatePayload
+  payload: ServiceCreatePayload,
 ): Promise<ServiceResponse> {
-  const { data } = await api.post<ServiceResponse>(
-    `/establishments/${establishmentId}/services`,
-    payload
-  );
-  return data;
+  const url = `${API_BASE_URL}/api/v1/establishments/${establishmentId}/services`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const erro = await response.text();
+    throw new Error(`Erro ao criar serviço [${response.status}]: ${erro}`);
+  }
+
+  return response.json();
 }
 
-// ─── PUT /api/v1/establishments/{establishmentId}/services/{id} ───────────────
-// Atualiza um serviço existente
+// ─── Alias em inglês (usado por home.tsx / empresa-home.tsx) ───────────────────
+export const createService = criarServico;
 
-export async function updateService(
+export interface ServiceUpdatePayload {
+  name: string;
+  price: number;
+  duration: number;
+  category: string;
+}
+
+export async function atualizarServico(
   establishmentId: string,
   serviceId: string,
-  payload: ServiceUpdatePayload
+  payload: ServiceUpdatePayload,
 ): Promise<ServiceResponse> {
-  const { data } = await api.put<ServiceResponse>(
-    `/establishments/${establishmentId}/services/${serviceId}`,
-    payload
-  );
-  return data;
+  const url = `${API_BASE_URL}/api/v1/establishments/${establishmentId}/services/${serviceId}`;
+
+  const response = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const erro = await response.text();
+    throw new Error(`Erro ao atualizar serviço [${response.status}]: ${erro}`);
+  }
+
+  return response.json();
 }
 
-// ─── DELETE /api/v1/establishments/{establishmentId}/services/{id} ────────────
-// Exclui um serviço
+// ─── Excluir serviço ────────────────────────────────────────────────────────────
 
-export async function deleteService(
+export async function excluirServico(
   establishmentId: string,
-  serviceId: string
+  serviceId: string,
 ): Promise<void> {
-  await api.delete(`/establishments/${establishmentId}/services/${serviceId}`);
+  const url = `${API_BASE_URL}/api/v1/establishments/${establishmentId}/services/${serviceId}`;
+
+  const response = await fetch(url, {
+    method: 'DELETE',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok && response.status !== 204) {
+    const erro = await response.text();
+    throw new Error(`Erro ao excluir serviço [${response.status}]: ${erro}`);
+  }
 }
+
+// ─── Aliases em inglês (usados pelos modais Add/Edit ServiceModal) ─────────────
+export const updateService = atualizarServico;
+export const deleteService = excluirServico;

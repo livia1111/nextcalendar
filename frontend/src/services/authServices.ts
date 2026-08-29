@@ -6,6 +6,7 @@ type LoginResponse = {
     id: string;
     name: string;
     email: string;
+    role: 'CUSTOMER' | 'MANAGER' | 'PROFESSIONAL';
   };
 };
 

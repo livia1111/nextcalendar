@@ -58,7 +58,7 @@ public class AuthService {
 
         return new LoginResponseDTO(
                 token,
-                new LoginResponseDTO.UserInfoDTO(user.getId(), user.getName(), user.getEmail())
+                new LoginResponseDTO.UserInfoDTO(user.getId(), user.getName(), user.getEmail(), user.getRole())
         );
     }
 
@@ -113,14 +113,14 @@ public class AuthService {
         if (saved.getRole() == UserRole.CUSTOMER) {
             clientService.createClientFromRegistration(saved, dto);
         }
-        
+
         emailService.sendConfirmationEmail(saved.getEmail(), saved.getName());
 
         String token = jwtService.generateToken(saved.getId(), saved.getEmail());
 
         return new LoginResponseDTO(
                 token,
-                new LoginResponseDTO.UserInfoDTO(saved.getId(), saved.getName(), saved.getEmail())
+                new LoginResponseDTO.UserInfoDTO(saved.getId(), saved.getName(), saved.getEmail(), saved.getRole())
         );
     }
 }

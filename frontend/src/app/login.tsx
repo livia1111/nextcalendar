@@ -40,8 +40,12 @@ export default function LoginScreen() {
   setIsSubmitting(true)
 
   try{
-    await signIn(result.data.email,result.data.password);
-    router.push('/(tabs)/home' as any);
+    const loggedUser = await signIn(result.data.email, result.data.password);
+    if (loggedUser.role === 'MANAGER') {
+      router.push('/empresa-home' as any);
+    } else {
+      router.push('/(tabs)/home' as any);
+    }
   } catch(err:any){
     setError(err.message ?? 'Não foi possivel entrar. Tente novamente')
   }finally{

@@ -14,6 +14,8 @@ import { AdminHeader } from '@/components/admin/AdminHeader';
 import { ProfessionalSelector } from '@/components/admin/ProfessionalSelector';
 import { ProfessionalTimeline } from '@/components/admin/ProfessionalTimeline';
 import { AddProfessionalModal } from '@/components/admin/AddProfessionalModal';
+import { ServiceSelector } from '@/components/admin/ServiceSelector';
+import { AddServiceModal } from '@/components/admin/AddServiceModal';
 
 import { Colors } from '@/constants/colors';
 import { useAuth } from '@/context/AuthContext';
@@ -22,6 +24,12 @@ import {
   createProfessional,
   type ProfessionalCreateInput,
 } from '@/services/professionalServices';
+import {
+  getServices,
+  createService,
+  type ServiceResponse,
+  type ServiceCreatePayload,
+} from '@/services/serviceServices';
 import {
   getAgendaByDate,
   type AgendaSlot,
@@ -51,6 +59,12 @@ export default function EmpresaHomeScreen() {
   } = useProfessional(establishmentId);
 
   const [selectedProfessionalId, setSelectedProfessionalId] = useState<string | null>(null);
+
+  // Serviços — dados reais vindos do backend
+  const [services, setServices] = useState<ServiceResponse[]>([]);
+  const [loadingServices, setLoadingServices] = useState(false);
+  const [errorServices, setErrorServices] = useState(false);
+  const [serviceModalVisible, setServiceModalVisible] = useState(false);
 
   // Agenda / Timeline
   const [selectedDate, setSelectedDate] = useState<string>(() => {
@@ -85,6 +99,19 @@ export default function EmpresaHomeScreen() {
     }
   }
 
+  async function loadServices(estId: string) {
+    setLoadingServices(true);
+    setErrorServices(false);
+    try {
+      const page = await getServices(estId);
+      setServices(page.content);
+    } catch {
+      setErrorServices(true);
+    } finally {
+      setLoadingServices(false);
+    }
+  }
+
   useEffect(() => {
     loadData();
   }, [loadData]);
@@ -95,6 +122,13 @@ export default function EmpresaHomeScreen() {
       loadAgenda(selectedDate, selectedProfessionalId);
     }
   }, [selectedDate, selectedProfessionalId, loading, establishmentId]);
+
+  // Carrega os serviços assim que o estabelecimento estiver disponível
+  useEffect(() => {
+    if (!loading && establishmentId) {
+      loadServices(establishmentId);
+    }
+  }, [loading, establishmentId]);
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -125,6 +159,22 @@ export default function EmpresaHomeScreen() {
       setTimeout(() => setMode('active'), 100);
     } catch {
       Alert.alert('Erro', 'Não foi possível cadastrar o profissional. Tente novamente.');
+    }
+  }
+
+  // ─── Criar Serviço ──────────────────────────────────────────────────────────
+  async function handleCreateService(input: ServiceCreatePayload) {
+    const targetEstId = establishmentId || user?.id || '';
+    if (!targetEstId) {
+      Alert.alert('Erro', 'Estabelecimento não encontrado. Tente novamente.');
+      return;
+    }
+    try {
+      await createService(targetEstId, input);
+      Alert.alert('Sucesso', `Serviço ${input.name} cadastrado com sucesso!`);
+      await loadServices(targetEstId);
+    } catch {
+      Alert.alert('Erro', 'Não foi possível cadastrar o serviço. Tente novamente.');
     }
   }
 
@@ -224,6 +274,14 @@ export default function EmpresaHomeScreen() {
           hasError={!!errorProfessionals}
         />
 
+        {/* Catálogo de Serviços — dados reais do backend */}
+        <ServiceSelector
+          services={services}
+          onAddPress={() => setServiceModalVisible(true)}
+          isLoading={loadingServices}
+          hasError={errorServices}
+        />
+
         {/* Timeline da Agenda */}
         <ProfessionalTimeline
           selectedDate={selectedDate}
@@ -239,6 +297,13 @@ export default function EmpresaHomeScreen() {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onSubmit={handleCreateProfessional}
+      />
+
+      {/* Modal de Cadastro de Serviço */}
+      <AddServiceModal
+        visible={serviceModalVisible}
+        onClose={() => setServiceModalVisible(false)}
+        onSubmit={handleCreateService}
       />
     </View>
   );

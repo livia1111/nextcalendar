@@ -42,7 +42,7 @@ export default function LoginScreen() {
   try{
     const loggedUser = await signIn(result.data.email, result.data.password);
     if (loggedUser.role === 'MANAGER') {
-      router.push('/empresa-home' as any);
+      router.push('/(gestor)/agenda' as any);
     } else {
       router.push('/(tabs)/home' as any);
     }

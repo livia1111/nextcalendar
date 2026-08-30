@@ -12,16 +12,16 @@ function RootLayoutNav() {
     if (isLoading) return;
 
     const inAuthGroup = !segments[0] || segments[0] === 'login' || segments[0] === 'register' || segments[0] === 'register-empresa';
-    
+
     if (!user && !inAuthGroup) {
       // Não está logado e tentou acessar área restrita
       router.replace('/login');
     } else if (user && inAuthGroup) {
       // Está logado e tentou acessar login/register — manda para a home certa do perfil
       if (user.role === 'MANAGER') {
-        router.replace('/empresa-home');
+        router.replace('/(gestor)/agenda' as any);
       } else {
-        router.replace('/(tabs)/home');
+        router.replace('/(tabs)/home' as any);
       }
     }
   }, [user, isLoading, segments]);
@@ -40,6 +40,7 @@ function RootLayoutNav() {
 
       {/* Main App (tabs) */}
       <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="(gestor)" />
 
       {/* Detail screens */}
       <Stack.Screen name="booking" />
@@ -57,4 +58,3 @@ export default function RootLayout() {
     </AuthProvider>
   );
 }
-

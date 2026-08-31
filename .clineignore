@@ -1,0 +1,32 @@
+# ==========================================
+# .clineignore - Regras de Ignorar do Cline
+# ==========================================
+node_modules/
+**/node_modules/
+.mvn/
+**/backend/.mvn/
+target/
+**/backend/target/
+.expo/
+**/frontend/.expo/
+dist/
+build/
+*.class
+*.jar
+*.war
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+.git/
+.svn/
+*.tmp
+*.log
+inst_user_settings.tmp
+.vscode/
+.idea/
+.eclipse/
+.claude/
+*.swp

@@ -1,0 +1,43 @@
+# ==============================================================================
+# REGRAS DO PROJETO NEXTCALENDAR (Unificado para Assistentes de IA)
+# ==============================================================================
+
+# 1. VISÃO GERAL E ARQUITETURA DO PROJETO
+- O projeto NextCalendar é um Monorepo composto por dois módulos principais:
+  - `frontend/`: Aplicação Mobile desenvolvida com React Native, Expo e TypeScript.
+  - `backend/`: API RESTful desenvolvida com Java 17/21, Spring Boot e Maven.
+
+# 2. DIRETRIZES DO FRONTEND (REACT NATIVE / EXPO / TYPESCRIPT)
+- **Linguagem & Tipagem**:
+  - Usar TypeScript estrito (evitar estritamente o uso de `any`).
+- **Organização de Arquivos**:
+  - Navegação e Telas em `frontend/src/app/`.
+  - Componentes reutilizáveis de interface em `frontend/src/components/ui/`.
+  - Ícones em `frontend/src/components/icons/`.
+- **Estilização e Layout**:
+  - Priorizar design moderno, limpo, fluido e responsivo.
+  - Evitar acoplamento de dimensões fixas brutas sem cálculo dinâmico ou flexbox.
+- **Gerenciamento de Estado e API**:
+  - Manter estados locais bem escopados em componentes.
+  - Tratar adequadamente estados de carregamento (loading), vazio (empty) e de erro.
+
+# 3. DIRETRIZES DO BACKEND (JAVA / SPRING BOOT)
+- **Linguagem & Padrões**:
+  - Java 17/21 com princípios SOLID, Clean Code e Clean Architecture.
+- **Arquitetura em Camadas**:
+  - Controllers (`@RestController`) em pacotes de controllers.
+  - Regras de negócio encapsuladas em Services (`@Service`).
+  - Acesso a dados via Repositories (`JpaRepository`).
+  - DTOs para tráfego de dados entre cliente e servidor (jamais expor Entidades JPA diretamente nas APIs).
+- **Validação e Exceções**:
+  - Usar Jakarta Validation (`@NotNull`, `@NotBlank`, etc.) nos DTOs de entrada.
+  - Centralizar tratamento de erros com `@ControllerAdvice` / `@ExceptionHandler`.
+
+# 4. SEGURANÇA E PRIVACIDADE DE DADOS
+- NUNCA codificar chaves secretas, senhas, tokens ou URLs de conexões reais diretamente no código fonte.
+- Usar variáveis de ambiente (`.env` no frontend e `application.yml`/variáveis no backend).
+
+# 5. PROTOCOLO DE QUALIDADE E VERIFICAÇÃO
+- Respeitar contratos de API existentes. Ao alterar a assinatura de um método ou endpoint, atualizar todas as chamadas correspondentes no projeto.
+- Preservar documentações e comentários de código existentes.
+- Antes de concluir uma tarefa, verificar se a compilação e os tipos estão corretos sem erros de sintaxe ou build.

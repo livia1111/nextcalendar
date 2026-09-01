@@ -10,7 +10,7 @@ export function useProfessional(establishmentId:string){
 
     useEffect(()=>{
         async function getData(){
-           setLoading(true)
+           setLoading(true) 
             if (mode==='active') {
                 try{
                         const response  =  await getActiveProfessionals(establishmentId)

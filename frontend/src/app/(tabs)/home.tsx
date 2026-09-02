@@ -214,13 +214,7 @@ export default function HomeScreen() {
           onNewBookingPress={handleStartBooking}
         />
 
-        {/* 2. Pontos de Fidelidade — calculados pelo total de atendimentos concluídos */}
-        {/* TODO: definir regra de pontuação e bonificação com o time de produto */}
-        <LoyaltyCard
-          currentPoints={completedBookingsCount}
-          targetPoints={10}
-          rewardDescription="1 Corte Grátis ou Tratos VIP"
-        />
+       
 
         {/* 3. Agendamento Rápido — profissionais ativos vindos do backend */}
         {loadingProfessionals ? (

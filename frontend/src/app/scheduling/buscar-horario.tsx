@@ -1,4 +1,4 @@
-import { isAxiosError } from 'axios';
+﻿import { isAxiosError } from 'axios';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -73,7 +73,7 @@ export default function BuscarHorarioScreen() {
   // TODO: TEMPORÁRIO — hardcode pra testar o fluxo do cliente antes de existir
 // a tela de seleção de estabelecimento. Reverter para useEstablishment()
 // (ou o hook certo do lado do cliente) quando esse fluxo existir.
-const establishmentId = '96bd4e68-051c-4815-96be-0f7c1c596518	'; // seu establishmentId de teste
+const establishmentId = 'eacaecc9-20c4-4288-85cf-6ff4d49c3263'; // seu establishmentId de teste
 const loadingEst = false;
 
   // ── Listas de opções ───────────────────────────────────────────────────────

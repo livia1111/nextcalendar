@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 
 import { AdminHeader } from '@/components/admin/AdminHeader';
 import { ProfessionalSelector } from '@/components/admin/ProfessionalSelector';
@@ -19,55 +19,79 @@ import { useAuth } from '@/context/AuthContext';
 import { useEstablishment } from '@/hooks/useEstablishment';
 import { useProfessional } from '@/hooks/useProfessionals';
 import {
-  getAgendaByDate,
-  type AgendaSlot,
-  blockSlot,
-} from '@/services/agendaServices';
+  getEstablishmentAppointments,
+  type Appointment,
+} from '@/services/appointmentServices';
 
-export default function AgendaScreen() {
+export default function HomeEmpresaScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { user, token, signOut } = useAuth();
-  const { establishmentId, establishmentName, loading, reload } = useEstablishment();
+  const { user, signOut } = useAuth();
+  const { establishmentId, establishmentName, loading: loadingEst, reload: reloadEst } = useEstablishment();
 
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingAppointments, setLoadingAppointments] = useState(true);
 
-  // Profissionais — dados reais vindos do hook (busca no backend)
+  // Profissionais — dados reais vindos do hook do estabelecimento
   const {
     professionals,
     loading: loadingProfessionals,
     error: errorProfessionals,
+    setMode,
   } = useProfessional(establishmentId);
 
   const [selectedProfessionalId, setSelectedProfessionalId] = useState<string | null>(null);
 
-  // Agenda / Timeline
+  // Data selecionada (padrão: hoje em formato YYYY-MM-DD)
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     const today = new Date();
-    return today.toISOString().split('T')[0];
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, '0');
+    const d = String(today.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   });
-  const [slots, setSlots] = useState<AgendaSlot[]>([]);
 
-  async function loadAgenda(dateStr: string, profId: string | null) {
+  // Agendamentos reais do backend
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+
+  // ─── Carregar agendamentos reais do estabelecimento ──────────────────────
+  const loadAppointments = useCallback(async () => {
+    if (!establishmentId) {
+      setAppointments([]);
+      setLoadingAppointments(false);
+      return;
+    }
+
     try {
-      const data = await getAgendaByDate(dateStr, profId || undefined, token);
-      setSlots(data);
+      setLoadingAppointments(true);
+      const data = await getEstablishmentAppointments(
+        establishmentId,
+        selectedDate,
+        selectedProfessionalId
+      );
+      setAppointments(data);
     } catch {
-      setSlots([]);
+      setAppointments([]);
+    } finally {
+      setLoadingAppointments(false);
     }
-  }
+  }, [establishmentId, selectedDate, selectedProfessionalId]);
 
-  // Recarrega agenda quando muda profissional ou data (só depois de ter o estab.)
-  useEffect(() => {
-    if (!loading && establishmentId) {
-      loadAgenda(selectedDate, selectedProfessionalId);
-    }
-  }, [selectedDate, selectedProfessionalId, loading, establishmentId]);
+  // Recarrega sempre que a tela ganha foco ou quando os filtros mudam
+  useFocusEffect(
+    useCallback(() => {
+      if (establishmentId) {
+        loadAppointments();
+      }
+    }, [establishmentId, loadAppointments])
+  );
 
   async function handleRefresh() {
     setRefreshing(true);
-    await reload();
-    await loadAgenda(selectedDate, selectedProfessionalId);
+    await reloadEst();
+    setMode('all');
+    setTimeout(() => setMode('active'), 50);
+    await loadAppointments();
     setRefreshing(false);
   }
 
@@ -76,67 +100,63 @@ export default function AgendaScreen() {
     const [year, month, day] = selectedDate.split('-').map(Number);
     const date = new Date(year, month - 1, day);
     date.setDate(date.getDate() + deltaDays);
-    setSelectedDate(date.toISOString().split('T')[0]);
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    setSelectedDate(`${y}-${m}-${d}`);
   }
 
-  // ─── Criar Profissional (cadastro fica na aba Equipe) ─────────────────────
+  // ─── Criar Profissional (leva para a aba Equipe) ─────────────────────────
   function handleGoToEquipe() {
     router.push('/(gestor)/equipe' as any);
   }
 
-  // ─── Ação no Slot ────────────────────────────────────────────────────────
-  function handleSelectSlot(slot: AgendaSlot) {
-    if (slot.status === 'confirmed') {
-      Alert.alert(
-        'Detalhes do Agendamento',
-        `Cliente: ${slot.clientName}\nServiço: ${slot.service}\nHorário: ${slot.time}`,
-        [
-          { text: 'Fechar', style: 'cancel' },
-          {
-            text: 'Notificar WhatsApp',
-            onPress: () => Alert.alert('Lembrete', 'Mensagem enviada ao cliente via WhatsApp!'),
-          },
-        ]
-      );
-    } else if (slot.status === 'free') {
-      Alert.alert('Gerenciar Horário', `Horário das ${slot.time}`, [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Bloquear Horário',
-          style: 'destructive',
-          onPress: async () => {
-            await blockSlot(slot.id, token);
-            setSlots((prev) =>
-              prev.map((s) => (s.id === slot.id ? { ...s, status: 'blocked' } : s))
-            );
-          },
-        },
-      ]);
-    } else if (slot.status === 'blocked') {
-      Alert.alert('Desbloquear', `Deseja liberar o horário das ${slot.time}?`, [
-        { text: 'Não', style: 'cancel' },
-        {
-          text: 'Liberar',
-          onPress: () => {
-            setSlots((prev) =>
-              prev.map((s) => (s.id === slot.id ? { ...s, status: 'free' } : s))
-            );
-          },
-        },
-      ]);
-    }
+  // ─── Ação ao tocar num agendamento real ──────────────────────────────────
+  function handleSelectAppointment(appt: Appointment) {
+    const d = new Date(appt.startDateTime);
+    const timeFormatted = !isNaN(d.getTime())
+      ? d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      : appt.startDateTime;
+
+    const statusLabel =
+      appt.status === 'SCHEDULED'
+        ? 'Confirmado'
+        : appt.status === 'COMPLETED'
+        ? 'Concluído'
+        : appt.status === 'CANCELLED'
+        ? 'Cancelado'
+        : appt.status === 'NO_SHOW'
+        ? 'Não compareceu'
+        : appt.status;
+
+    Alert.alert(
+      'Detalhes do Agendamento',
+      `Serviço: ${appt.serviceName}\nProfissional: ${appt.professionalName}\nCliente: ${appt.clientName}\nHorário: ${timeFormatted}\nValor: R$ ${appt.servicePrice ? appt.servicePrice.toFixed(2) : '0.00'}\nStatus: ${statusLabel}${appt.isFitIn ? ' (Encaixe)' : ''}`,
+      [{ text: 'Fechar', style: 'cancel' }]
+    );
   }
 
-  // Métricas calculadas
-  const totalAppointments = slots.filter(
-    (s) => s.status === 'confirmed' || s.status === 'encaixe'
-  ).length;
+  // ─── Métricas reais calculadas dos agendamentos ──────────────────────────
+  const activeAppointments = appointments.filter((a) => a.status !== 'CANCELLED');
+  const totalAppointments = activeAppointments.length;
   const activeProfCount = professionals.length;
-  const nextConfirmed = slots.find((s) => s.status === 'confirmed')?.time || '--:--';
+
+  const nextScheduled = appointments
+    .filter((a) => a.status === 'SCHEDULED')
+    .sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime())[0];
+
+  const nextAppointmentTime = nextScheduled
+    ? (() => {
+        const d = new Date(nextScheduled.startDateTime);
+        return !isNaN(d.getTime())
+          ? d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+          : nextScheduled.startDateTime.slice(11, 16);
+      })()
+    : '--:--';
 
   const selectedProfObj = professionals.find((p) => p.id === selectedProfessionalId);
 
-  if (loading) {
+  if (loadingEst) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={Colors.gold} />
@@ -159,17 +179,17 @@ export default function AgendaScreen() {
             tintColor={Colors.gold}
           />
         }>
-        {/* Header do Gestor */}
+        {/* Header do Gestor com Métricas Reais */}
         <AdminHeader
           establishmentName={establishmentName}
           managerName={user?.name || 'Gestor'}
           totalAppointments={totalAppointments}
           activeProfessionalsCount={activeProfCount}
-          nextAppointmentTime={nextConfirmed}
+          nextAppointmentTime={nextAppointmentTime}
           onSignOut={signOut}
         />
 
-        {/* Barra de Profissionais — seleciona de quem ver a agenda */}
+        {/* Barra de Profissionais Reais do Estabelecimento */}
         <ProfessionalSelector
           professionals={professionals}
           selectedId={selectedProfessionalId}
@@ -179,13 +199,14 @@ export default function AgendaScreen() {
           hasError={!!errorProfessionals}
         />
 
-        {/* Timeline da Agenda */}
+        {/* Timeline da Agenda com Agendamentos Reais do Backend */}
         <ProfessionalTimeline
           selectedDate={selectedDate}
           professionalName={selectedProfObj?.nickname || selectedProfObj?.name}
-          slots={slots}
+          appointments={appointments}
+          isLoading={loadingAppointments}
           onDateChange={handleDateChange}
-          onSelectSlot={handleSelectSlot}
+          onSelectAppointment={handleSelectAppointment}
         />
       </ScrollView>
     </View>

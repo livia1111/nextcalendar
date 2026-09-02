@@ -69,7 +69,7 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   // ── Estado: Agendamentos ─────────────────────────────────────────────────
-  const [nextBooking, setNextBooking] = useState<Booking | null>(null);
+  const [upcomingBookings, setUpcomingBookings] = useState<Booking[]>([]);
   const [completedBookingsCount, setCompletedBookingsCount] = useState(0);
 
   // ── Estado: Serviços do Tenant ───────────────────────────────────────────
@@ -100,21 +100,17 @@ export default function HomeScreen() {
           // Agendamentos futuros ou agendados
           const upcoming = appointments
             .filter((a) => a.status === 'SCHEDULED')
-            .sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime());
+            .sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime())
+            .map(formatAppointmentToBooking);
 
-          if (upcoming.length > 0) {
-            setNextBooking(formatAppointmentToBooking(upcoming[0]));
-          } else {
-            setNextBooking(null);
-          }
-
+          setUpcomingBookings(upcoming);
           setCompletedBookingsCount(appointments.filter((a) => a.status === 'COMPLETED').length);
         } else {
-          setNextBooking(null);
+          setUpcomingBookings([]);
           setCompletedBookingsCount(0);
         }
       } catch {
-        setNextBooking(null);
+        setUpcomingBookings([]);
         setCompletedBookingsCount(0);
       }
     }
@@ -212,8 +208,11 @@ export default function HomeScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.gold} />
         }>
 
-        {/* 1. Próximo Agendamento (ou estado vazio) */}
-        <NextBookingCard booking={nextBooking} onNewBookingPress={handleStartBooking} />
+        {/* 1. Próximo Agendamento (ou Carrossel se houver mais de 1) */}
+        <NextBookingCard
+          bookings={upcomingBookings}
+          onNewBookingPress={handleStartBooking}
+        />
 
         {/* 2. Pontos de Fidelidade — calculados pelo total de atendimentos concluídos */}
         {/* TODO: definir regra de pontuação e bonificação com o time de produto */}

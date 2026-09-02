@@ -7,7 +7,13 @@
  * <Button label="Desabilitado" disabled />
  */
 
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, ViewStyle } from 'react-native';
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  TouchableOpacityProps,
+} from 'react-native';
 import { Colors } from '@/constants/colors';
 import { useAppFonts } from '@/hooks/use-fonts';
 
@@ -17,7 +23,7 @@ interface ButtonProps {
   loading?: boolean;
   disabled?: boolean;
   variant?: 'primary' | 'outline';
-  style?: ViewStyle;
+  style?: TouchableOpacityProps['style'];
 }
 
 export function Button({ label, onPress, loading, disabled, variant = 'primary', style }: ButtonProps) {

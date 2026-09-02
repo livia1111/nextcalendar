@@ -4,8 +4,8 @@
  * com opções de Cancelar e Pagar/Remarcar.
  */
 
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { useState, useCallback } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -20,17 +20,39 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CheckCircleIcon, LocationPinIcon, PlusIcon, XIcon } from '@/components/icons';
 import { Colors } from '@/constants/colors';
 import { useAppFonts } from '@/hooks/use-fonts';
-import { getMyBookings, cancelBooking, type Booking } from '@/services/bookingServices'; // ⚠️ confere o nome real do arquivo
+import { type Booking } from '@/services/bookingServices';
+import { getClientAppointments, cancelAppointment, type Appointment } from '@/services/appointmentServices';
+import { getClientByUserId } from '@/services/clientServices';
 import { useAuth } from '@/context/AuthContext';
 
 const TABS = ['Próximo', 'Completo', 'Cancelado'] as const;
 type BookingTab = typeof TABS[number];
 
+function formatAppointmentToBooking(appt: Appointment): Booking {
+  const d = new Date(appt.startDateTime);
+  const dateFormatted = !isNaN(d.getTime())
+    ? d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    : appt.startDateTime;
+
+  return {
+    id: appt.id,
+    date: dateFormatted,
+    time: !isNaN(d.getTime()) ? d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '',
+    shop: appt.professionalName || 'Profissional',
+    address: 'Atendimento',
+    services: appt.serviceName || 'Serviço',
+    price: appt.servicePrice != null ? `R$ ${appt.servicePrice.toFixed(2)}` : 'R$ 0,00',
+    status: appt.status === 'COMPLETED' ? 'done' : appt.status === 'CANCELLED' ? 'cancelled' : 'upcoming',
+  };
+}
+
 export default function BookingTabScreen() {
   const { fontRegular, fontSemiBold, fontBold } = useAppFonts();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { token } = useAuth();
+  const { user } = useAuth();
+
+  const currentTenantId = '96bd4e68-051c-4815-96be-0f7c1c596518';
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,25 +63,33 @@ export default function BookingTabScreen() {
   const [cancelModal, setCancelModal] = useState<string | null>(null);
   const [cancelSuccess, setCancelSuccess] = useState(false);
 
-  useEffect(() => {
-    let active = true;
-    async function load() {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await getMyBookings(token);
-        if (active) setBookings(data);
-      } catch (err) {
-        if (active) setError('Não foi possível carregar seus agendamentos.');
-      } finally {
-        if (active) setLoading(false);
-      }
+  const loadBookings = useCallback(async () => {
+    if (!user?.id) {
+      setLoading(false);
+      return;
     }
-    load();
-    return () => {
-      active = false;
-    };
-  }, [token]);
+    try {
+      setLoading(true);
+      setError(null);
+      const client = await getClientByUserId(user.id);
+      if (client?.id) {
+        const data = await getClientAppointments(currentTenantId, client.id);
+        setBookings(data.map(formatAppointmentToBooking));
+      } else {
+        setBookings([]);
+      }
+    } catch (err) {
+      setError('Não foi possível carregar seus agendamentos.');
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id, currentTenantId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadBookings();
+    }, [loadBookings])
+  );
 
   const filtered = bookings.filter(b => {
     if (activeTab === 'Próximo') return b.status === 'upcoming';
@@ -74,12 +104,12 @@ export default function BookingTabScreen() {
   async function confirmCancel() {
     if (!cancelModal) return;
     try {
-      await cancelBooking(cancelModal, token);
+      await cancelAppointment(currentTenantId, cancelModal);
       setBookings(prev =>
         prev.map(b => (b.id === cancelModal ? { ...b, status: 'cancelled' } : b))
       );
     } catch (err) {
-      // TODO: feedback de erro pro usuário (ex: toast)
+      // erro tratado
     } finally {
       setCancelModal(null);
       setCancelSuccess(true);
@@ -151,7 +181,7 @@ export default function BookingTabScreen() {
               reminder={reminders[booking.id] ?? false}
               onReminderChange={val => setReminders(r => ({ ...r, [booking.id]: val }))}
               onCancel={() => handleCancel(booking.id)}
-              onReschedule={() => router.push('/booking')}
+              onReschedule={() => router.push('/scheduling/booking')}
               fontRegular={fontRegular}
               fontSemiBold={fontSemiBold}
             />
@@ -162,7 +192,7 @@ export default function BookingTabScreen() {
       {/* Novo Agendamento */}
       <TouchableOpacity
         style={styles.newBookingButton}
-        onPress={() => router.push('../scheduling/agenda-do-profissional')}>
+        onPress={() => router.push('../scheduling/buscar-horario')}>
         <PlusIcon size={18} color={Colors.white} />
         <Text style={[styles.newBookingText, { fontFamily: fontSemiBold }]}>
           Novo Agendamento

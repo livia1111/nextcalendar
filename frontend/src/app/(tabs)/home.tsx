@@ -11,8 +11,8 @@
  *       vindo do AuthContext ou de um contexto de tenant dedicado.
  */
 
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { useEffect, useState, useCallback } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -35,8 +35,28 @@ import { useAppFonts } from '@/hooks/use-fonts';
 import { useAuth } from '@/context/AuthContext';
 import { useProfessional } from '@/hooks/useProfessionals';
 
-import { getMyBookings, type Booking } from '@/services/bookingServices';
+import { type Booking } from '@/services/bookingServices';
 import { getServices, type ServiceResponse } from '@/services/serviceServices';
+import { getClientAppointments, type Appointment } from '@/services/appointmentServices';
+import { getClientByUserId } from '@/services/clientServices';
+
+function formatAppointmentToBooking(appt: Appointment): Booking {
+  const d = new Date(appt.startDateTime);
+  const dateFormatted = !isNaN(d.getTime())
+    ? d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    : appt.startDateTime;
+
+  return {
+    id: appt.id,
+    date: dateFormatted,
+    time: !isNaN(d.getTime()) ? d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '',
+    shop: appt.professionalName || 'Profissional',
+    address: 'Próximo atendimento',
+    services: appt.serviceName || 'Serviço',
+    price: appt.servicePrice != null ? `R$ ${appt.servicePrice.toFixed(2)}` : 'R$ 0,00',
+    status: appt.status === 'COMPLETED' ? 'done' : appt.status === 'CANCELLED' ? 'cancelled' : 'upcoming',
+  };
+}
 
 export default function HomeScreen() {
   const { fontSemiBold } = useAppFonts();
@@ -58,9 +78,8 @@ export default function HomeScreen() {
   // ── Estado: Profissional selecionado para agendamento rápido ─────────────
   const [selectedProfessionalId, setSelectedProfessionalId] = useState<string | null>(null);
 
-  // TODO: substituir pelo tenantId real quando o vínculo cliente↔tenant estiver definido
-  const currentTenantId = user?.id ?? '';
-  // TODO: buscar o nome real do estabelecimento via API (ex: getEstablishmentByOwner)
+  // Estabelecimento padrão atual para o fluxo do cliente
+  const currentTenantId = '96bd4e68-051c-4815-96be-0f7c1c596518';
   const tenantName = 'Estabelecimento';
 
   // ── Profissionais ativos do estabelecimento (dados reais do backend) ──────
@@ -70,35 +89,53 @@ export default function HomeScreen() {
   } = useProfessional(currentTenantId);
 
   // ── Carregamento de dados ────────────────────────────────────────────────
-  async function loadHomeData() {
-    // 1. Agendamentos do cliente
-    try {
-      const bookings = await getMyBookings(token);
-      setNextBooking(bookings.find((b) => b.status === 'upcoming') ?? null);
-      setCompletedBookingsCount(bookings.filter((b) => b.status === 'done').length);
-    } catch {
-      setNextBooking(null);
-      setCompletedBookingsCount(0);
+  const loadHomeData = useCallback(async () => {
+    // 1. Agendamentos reais do cliente
+    if (user?.id) {
+      try {
+        const client = await getClientByUserId(user.id);
+        if (client?.id) {
+          const appointments = await getClientAppointments(currentTenantId, client.id);
+          
+          // Agendamentos futuros ou agendados
+          const upcoming = appointments
+            .filter((a) => a.status === 'SCHEDULED')
+            .sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime());
+
+          if (upcoming.length > 0) {
+            setNextBooking(formatAppointmentToBooking(upcoming[0]));
+          } else {
+            setNextBooking(null);
+          }
+
+          setCompletedBookingsCount(appointments.filter((a) => a.status === 'COMPLETED').length);
+        } else {
+          setNextBooking(null);
+          setCompletedBookingsCount(0);
+        }
+      } catch {
+        setNextBooking(null);
+        setCompletedBookingsCount(0);
+      }
     }
 
     // 2. Serviços cadastrados no estabelecimento
-    if (!currentTenantId) {
-      setServices([]);
-      return;
+    if (currentTenantId) {
+      try {
+        const page = await getServices(currentTenantId);
+        setServices(page?.content ?? []);
+      } catch {
+        setServices([]);
+      }
     }
+  }, [user?.id, currentTenantId]);
 
-    try {
-      const page = await getServices(currentTenantId);
-      setServices(page?.content ?? []);
-    } catch {
-      setServices([]);
-    }
-  }
-
-  useEffect(() => {
-    setInitialLoading(true);
-    loadHomeData().finally(() => setInitialLoading(false));
-  }, [token, currentTenantId]);
+  // Recarrega sempre que a tela Home ganhar foco (ex: após voltar do agendamento)
+  useFocusEffect(
+    useCallback(() => {
+      loadHomeData().finally(() => setInitialLoading(false));
+    }, [loadHomeData])
+  );
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -107,7 +144,7 @@ export default function HomeScreen() {
   }
 
   function handleStartBooking() {
-    router.push('/scheduling/agenda-do-profissional' as any);
+    router.push('/scheduling/buscar-horario' as any);
   }
 
   // ── Render: loading inicial ──────────────────────────────────────────────

@@ -7,5 +7,5 @@ import { Redirect } from 'expo-router';
  * (Agenda, Serviços, Equipe, Perfil).
  */
 export default function EmpresaHomeRedirect() {
-  return <Redirect href={'/(gestor)/agenda' as any} />;
+  return <Redirect href={'/(gestor)/homeEmpresa' as any} />;
 }

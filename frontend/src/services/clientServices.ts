@@ -112,3 +112,10 @@ export async function updateClient(
 export async function deleteClient(id: string): Promise<void> {
   await api.delete(`/clients/${id}`);
 }
+// ─── GET /api/v1/clients/by-user/{userId} ─────────────────────────────────────
+// Busca o cliente vinculado a um usuário autenticado (User -> Client)
+
+export async function getClientByUserId(userId: string): Promise<ClientDetails> {
+  const { data } = await api.get<ClientDetails>(`/clients/by-user/${userId}`);
+  return data;
+}

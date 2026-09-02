@@ -18,6 +18,7 @@ export default function RootLayout() {
         <Stack.Screen name="usuarios" options={{ title: 'Usuários' }} />
         <Stack.Screen name="servicos" options={{ headerShown: false }} />
         <Stack.Screen name="comanda" options={{ headerShown: false }} />
+        <Stack.Screen name="detalhes-atendimento" options={{ headerShown: false }} />
       </Stack>
     </SafeAreaProvider>
   );

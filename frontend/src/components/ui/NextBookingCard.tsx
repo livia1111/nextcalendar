@@ -1,19 +1,40 @@
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
+import {
+  FlatList,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { LocationPinIcon, PlusIcon } from '@/components/icons';
 import { Colors } from '@/constants/colors';
 import { useAppFonts } from '@/hooks/use-fonts';
 import type { Booking } from '@/services/bookingServices';
 
 interface NextBookingCardProps {
-  booking: Booking | null;
+  booking?: Booking | null;
+  bookings?: Booking[];
   onNewBookingPress: () => void;
 }
 
-export function NextBookingCard({ booking, onNewBookingPress }: NextBookingCardProps) {
+export function NextBookingCard({
+  booking,
+  bookings,
+  onNewBookingPress,
+}: NextBookingCardProps) {
   const { fontRegular, fontSemiBold, fontBold } = useAppFonts();
+  const { width: windowWidth } = useWindowDimensions();
+  const cardWidth = windowWidth - 40; // paddingHorizontal 20 de cada lado na Home
 
-  if (!booking) {
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  // Lista normalizada
+  const list = bookings ?? (booking ? [booking] : []);
+
+  if (list.length === 0) {
     return (
       <View style={styles.emptyContainer}>
         <View style={styles.emptyIconCircle}>
@@ -25,7 +46,10 @@ export function NextBookingCard({ booking, onNewBookingPress }: NextBookingCardP
         <Text style={[styles.emptySubtitle, { fontFamily: fontRegular }]}>
           Que tal agendar seu horário com praticidade?
         </Text>
-        <TouchableOpacity style={styles.emptyButton} onPress={onNewBookingPress} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={styles.emptyButton}
+          onPress={onNewBookingPress}
+          activeOpacity={0.85}>
           <PlusIcon size={16} color={Colors.white} />
           <Text style={[styles.emptyButtonText, { fontFamily: fontSemiBold }]}>
             Agendar Horário
@@ -35,38 +59,106 @@ export function NextBookingCard({ booking, onNewBookingPress }: NextBookingCardP
     );
   }
 
-  return (
-    <View style={styles.card}>
-      <View style={styles.topRow}>
-        <Text style={[styles.dateText, { fontFamily: fontSemiBold }]}>{booking.date}</Text>
-        <View style={styles.statusBadge}>
-          <Text style={[styles.statusText, { fontFamily: fontSemiBold }]}>Confirmado</Text>
-        </View>
-      </View>
+  function handleScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
+    const offsetX = e.nativeEvent.contentOffset.x;
+    const index = Math.round(offsetX / cardWidth);
+    if (index !== activeIndex && index >= 0 && index < list.length) {
+      setActiveIndex(index);
+    }
+  }
 
-      <View style={styles.bodyRow}>
-        <View style={styles.avatarBox}>
-          <Text style={{ fontSize: 20 }}>✂️</Text>
-        </View>
-        <View style={styles.infoBox}>
-          <Text style={[styles.shopName, { fontFamily: fontSemiBold }]}>{booking.shop}</Text>
-          <View style={styles.addrRow}>
-            <LocationPinIcon size={12} />
-            <Text style={[styles.addrText, { fontFamily: fontRegular }]} numberOfLines={1}>
-              {booking.address}
+  function renderCard(item: Booking, index?: number) {
+    return (
+      <View style={[styles.card, list.length > 1 && { width: cardWidth }]}>
+        <View style={styles.topRow}>
+          <View style={styles.dateGroup}>
+            <Text style={[styles.dateText, { fontFamily: fontSemiBold }]}>
+              {item.date}
+            </Text>
+            {list.length > 1 && (
+              <Text style={[styles.indexIndicator, { fontFamily: fontRegular }]}>
+                ({(index ?? 0) + 1} de {list.length})
+              </Text>
+            )}
+          </View>
+          <View style={styles.statusBadge}>
+            <Text style={[styles.statusText, { fontFamily: fontSemiBold }]}>
+              Confirmado
             </Text>
           </View>
-          <Text style={[styles.servicesText, { fontFamily: fontRegular }]} numberOfLines={1}>
-            {booking.services}
+        </View>
+
+        <View style={styles.bodyRow}>
+          <View style={styles.avatarBox}>
+            <Text style={{ fontSize: 20 }}>✂️</Text>
+          </View>
+          <View style={styles.infoBox}>
+            <Text style={[styles.shopName, { fontFamily: fontSemiBold }]}>
+              {item.shop}
+            </Text>
+            <View style={styles.addrRow}>
+              <LocationPinIcon size={12} />
+              <Text
+                style={[styles.addrText, { fontFamily: fontRegular }]}
+                numberOfLines={1}>
+                {item.address}
+              </Text>
+            </View>
+            <Text
+              style={[styles.servicesText, { fontFamily: fontRegular }]}
+              numberOfLines={1}>
+              {item.services}
+            </Text>
+          </View>
+          <Text style={[styles.priceText, { fontFamily: fontBold }]}>
+            {item.price}
           </Text>
         </View>
-        <Text style={[styles.priceText, { fontFamily: fontBold }]}>{booking.price}</Text>
+      </View>
+    );
+  }
+
+  // Card único
+  if (list.length === 1) {
+    return renderCard(list[0]);
+  }
+
+  // Carrossel com múltiplos agendamentos
+  return (
+    <View style={styles.carouselContainer}>
+      <FlatList
+        data={list}
+        keyExtractor={(item) => item.id}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        snapToInterval={cardWidth}
+        decelerationRate="fast"
+        renderItem={({ item, index }) => renderCard(item, index)}
+      />
+
+      {/* Dots de paginação */}
+      <View style={styles.dotsContainer}>
+        {list.map((_, idx) => (
+          <View
+            key={idx}
+            style={[
+              styles.dot,
+              idx === activeIndex ? styles.dotActive : styles.dotInactive,
+            ]}
+          />
+        ))}
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  carouselContainer: {
+    gap: 10,
+  },
   card: {
     backgroundColor: Colors.surface,
     borderRadius: 16,
@@ -78,9 +170,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  dateGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+  },
   dateText: {
     color: Colors.dark,
     fontSize: 14,
+  },
+  indexIndicator: {
+    color: Colors.grey400,
+    fontSize: 12,
   },
   statusBadge: {
     backgroundColor: Colors.goldLight,
@@ -135,7 +237,28 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
 
-  // Empty State Styles (utilizando somente Colors do projeto)
+  // Dots de Paginação
+  dotsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+    paddingTop: 2,
+  },
+  dot: {
+    height: 6,
+    borderRadius: 3,
+  },
+  dotActive: {
+    width: 18,
+    backgroundColor: Colors.gold,
+  },
+  dotInactive: {
+    width: 6,
+    backgroundColor: Colors.grey200,
+  },
+
+  // Empty State Styles
   emptyContainer: {
     backgroundColor: Colors.surface,
     borderRadius: 16,
@@ -181,3 +304,4 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
 });
+

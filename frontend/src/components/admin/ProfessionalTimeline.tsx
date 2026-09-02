@@ -1,52 +1,67 @@
-﻿import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { ChevronLeftIcon, ArrowRightIcon, ClockIcon } from '@/components/icons';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ChevronLeftIcon, ArrowRightIcon, ClockIcon, UsersIcon } from '@/components/icons';
 import { Colors } from '@/constants/colors';
 import { useAppFonts } from '@/hooks/use-fonts';
-import { AgendaSlot, SlotStatus } from '@/services/agendaServices';
+import { type Appointment, type AppointmentStatus } from '@/services/appointmentServices';
 
 interface ProfessionalTimelineProps {
   selectedDate: string;
   professionalName?: string;
-  slots: AgendaSlot[];
+  appointments: Appointment[];
+  isLoading?: boolean;
   onDateChange: (delta: number) => void;
-  onSelectSlot: (slot: AgendaSlot) => void;
+  onSelectAppointment?: (appointment: Appointment) => void;
 }
 
 export function ProfessionalTimeline({
   selectedDate,
   professionalName,
-  slots,
+  appointments,
+  isLoading = false,
   onDateChange,
-  onSelectSlot,
+  onSelectAppointment,
 }: ProfessionalTimelineProps) {
-  const { fontSemiBold, fontRegular } = useAppFonts();
+  const { fontSemiBold, fontRegular, fontBold } = useAppFonts();
 
   function formatDisplayDate(dateStr: string) {
     try {
       const [year, month, day] = dateStr.split('-').map(Number);
       const date = new Date(year, month - 1, day);
       return date.toLocaleDateString('pt-BR', {
-        weekday: 'short',
+        weekday: 'long',
         day: '2-digit',
-        month: 'short',
+        month: 'long',
       });
     } catch {
       return dateStr;
     }
   }
 
-  function getStatusBadge(status: SlotStatus) {
-    switch (status) {
-      case 'confirmed':
-        return { label: 'Confirmado', bg: '#E8F8EE', color: '#1B873F', border: '#C2ECCF' };
-      case 'encaixe':
-        return { label: 'Encaixe', bg: '#FDF2E9', color: '#D97706', border: '#FCD34D' };
-      case 'blocked':
-        return { label: 'Bloqueado', bg: '#F3F4F6', color: '#6B7280', border: '#E5E7EB' };
-      case 'free':
-      default:
-        return { label: 'Disponível', bg: '#F7F8FA', color: '#9CA3AF', border: '#E5E7EB' };
+  function getStatusBadge(status: AppointmentStatus, isFitIn?: boolean) {
+    if (isFitIn) {
+      return { label: 'Encaixe', bg: '#FDF2E9', color: '#D97706', border: '#FCD34D' };
     }
+    switch (status) {
+      case 'SCHEDULED':
+        return { label: 'Confirmado', bg: '#E8F8EE', color: '#1B873F', border: '#C2ECCF' };
+      case 'COMPLETED':
+        return { label: 'Concluído', bg: '#EDF4FC', color: '#1E64B4', border: '#BFDBFE' };
+      case 'CANCELLED':
+        return { label: 'Cancelado', bg: '#FEECEC', color: '#DC2626', border: '#FECACA' };
+      case 'NO_SHOW':
+        return { label: 'Não compareceu', bg: '#F3F4F6', color: '#6B7280', border: '#E5E7EB' };
+      default:
+        return { label: status, bg: '#F7F8FA', color: '#9CA3AF', border: '#E5E7EB' };
+    }
+  }
+
+  function formatTime(iso: string) {
+    if (!iso) return '--:--';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) {
+      return iso.includes('T') ? iso.slice(11, 16) : iso.slice(0, 5);
+    }
+    return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   }
 
   return (
@@ -79,76 +94,103 @@ export function ProfessionalTimeline({
         </View>
       </View>
 
-      {/* Slots List */}
-      <View style={styles.slotsList}>
-        {slots.map((slot) => {
-          const badge = getStatusBadge(slot.status);
-          const isFree = slot.status === 'free';
-          const isBlocked = slot.status === 'blocked';
+      {/* Loading State */}
+      {isLoading && (
+        <View style={styles.feedbackBox}>
+          <ActivityIndicator size="small" color={Colors.gold} />
+          <Text style={[styles.feedbackText, { fontFamily: fontRegular }]}>
+            Carregando agendamentos…
+          </Text>
+        </View>
+      )}
 
-          return (
-            <TouchableOpacity
-              key={slot.id}
-              style={[
-                styles.slotCard,
-                isFree && styles.slotFree,
-                isBlocked && styles.slotBlocked,
-              ]}
-              activeOpacity={0.75}
-              onPress={() => onSelectSlot(slot)}>
-              {/* Time Column */}
-              <View style={styles.timeCol}>
-                <ClockIcon size={14} color={isFree ? Colors.grey400 : Colors.dark} />
-                <Text
-                  style={[
-                    styles.timeText,
-                    { fontFamily: fontSemiBold },
-                    isFree && { color: Colors.grey400 },
-                  ]}>
-                  {slot.time}
-                </Text>
-              </View>
+      {/* Empty State */}
+      {!isLoading && appointments.length === 0 && (
+        <View style={styles.feedbackBox}>
+          <Text style={{ fontSize: 32 }}>📅</Text>
+          <Text style={[styles.emptyTitle, { fontFamily: fontSemiBold }]}>
+            Nenhum agendamento para este dia
+          </Text>
+          <Text style={[styles.feedbackText, { fontFamily: fontRegular }]}>
+            Os agendamentos confirmados aparecerão aqui em tempo real.
+          </Text>
+        </View>
+      )}
 
-              {/* Center Content */}
-              <View style={styles.slotMain}>
-                {isFree ? (
-                  <Text style={[styles.freeText, { fontFamily: fontRegular }]}>
-                    + Horário livre para agendamento
+      {/* Appointments List */}
+      {!isLoading && appointments.length > 0 && (
+        <View style={styles.slotsList}>
+          {appointments.map((appt) => {
+            const badge = getStatusBadge(appt.status, appt.isFitIn);
+            const isCancelled = appt.status === 'CANCELLED';
+
+            return (
+              <TouchableOpacity
+                key={appt.id}
+                style={[
+                  styles.slotCard,
+                  isCancelled && styles.slotCancelled,
+                ]}
+                activeOpacity={0.75}
+                onPress={() => onSelectAppointment?.(appt)}>
+                {/* Time Column */}
+                <View style={styles.timeCol}>
+                  <ClockIcon size={14} color={isCancelled ? Colors.grey400 : Colors.dark} />
+                  <Text
+                    style={[
+                      styles.timeText,
+                      { fontFamily: fontSemiBold },
+                      isCancelled && { color: Colors.grey400 },
+                    ]}>
+                    {formatTime(appt.startDateTime)}
                   </Text>
-                ) : isBlocked ? (
-                  <Text style={[styles.blockedText, { fontFamily: fontRegular }]}>
-                    Intervalo / Horário indisponível
-                  </Text>
-                ) : (
-                  <View style={styles.clientInfo}>
-                    <Text style={[styles.clientName, { fontFamily: fontSemiBold }]} numberOfLines={1}>
-                      {slot.clientName || 'Cliente'}
+                </View>
+
+                {/* Center Content */}
+                <View style={styles.slotMain}>
+                  <View style={styles.serviceRow}>
+                    <Text style={[styles.serviceName, { fontFamily: fontSemiBold }]} numberOfLines={1}>
+                      {appt.serviceName || 'Serviço'}
                     </Text>
-                    <Text style={[styles.serviceName, { fontFamily: fontRegular }]} numberOfLines={1}>
-                      {slot.service || 'Serviço'}
+                    {appt.servicePrice != null && (
+                      <Text style={[styles.priceText, { fontFamily: fontBold }]}>
+                        R$ {appt.servicePrice.toFixed(2)}
+                      </Text>
+                    )}
+                  </View>
+
+                  <Text style={[styles.clientName, { fontFamily: fontRegular }]} numberOfLines={1}>
+                    Cliente: <Text style={{ fontFamily: fontSemiBold, color: Colors.dark }}>{appt.clientName || 'Cliente'}</Text>
+                  </Text>
+
+                  {/* Profissional vinculado */}
+                  <View style={styles.profRow}>
+                    <UsersIcon size={12} color={Colors.goldDark} />
+                    <Text style={[styles.profName, { fontFamily: fontSemiBold }]} numberOfLines={1}>
+                      {appt.professionalName || 'Profissional'}
                     </Text>
                   </View>
-                )}
-              </View>
+                </View>
 
-              {/* Status Badge */}
-              <View
-                style={[
-                  styles.badge,
-                  { backgroundColor: badge.bg, borderColor: badge.border },
-                ]}>
-                <Text
+                {/* Status Badge */}
+                <View
                   style={[
-                    styles.badgeText,
-                    { fontFamily: fontSemiBold, color: badge.color },
+                    styles.badge,
+                    { backgroundColor: badge.bg, borderColor: badge.border },
                   ]}>
-                  {badge.label}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+                  <Text
+                    style={[
+                      styles.badgeText,
+                      { fontFamily: fontSemiBold, color: badge.color },
+                    ]}>
+                    {badge.label}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
     </View>
   );
 }
@@ -196,6 +238,27 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 1,
   },
+  feedbackBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    paddingVertical: 28,
+    paddingHorizontal: 20,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: Colors.grey100,
+  },
+  emptyTitle: {
+    color: Colors.dark,
+    fontSize: 15,
+    textAlign: 'center',
+  },
+  feedbackText: {
+    color: Colors.grey400,
+    fontSize: 13,
+    textAlign: 'center',
+  },
   slotsList: {
     gap: 10,
   },
@@ -215,19 +278,15 @@ const styles = StyleSheet.create({
     elevation: 1,
     gap: 12,
   },
-  slotFree: {
-    borderStyle: 'dashed',
-    backgroundColor: '#FAFAFC',
-  },
-  slotBlocked: {
-    backgroundColor: '#F7F8FA',
-    opacity: 0.8,
+  slotCancelled: {
+    backgroundColor: '#FAF9F9',
+    opacity: 0.7,
   },
   timeCol: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    minWidth: 70,
+    minWidth: 62,
   },
   timeText: {
     fontSize: 14,
@@ -235,26 +294,36 @@ const styles = StyleSheet.create({
   },
   slotMain: {
     flex: 1,
+    gap: 3,
   },
-  clientInfo: {
-    gap: 2,
-  },
-  clientName: {
-    fontSize: 14,
-    color: Colors.dark,
+  serviceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 6,
   },
   serviceName: {
+    fontSize: 14,
+    color: Colors.dark,
+    flex: 1,
+  },
+  priceText: {
+    fontSize: 13,
+    color: Colors.goldDark,
+  },
+  clientName: {
     fontSize: 12,
-    color: Colors.grey400,
-  },
-  freeText: {
-    fontSize: 13,
-    color: Colors.grey400,
-  },
-  blockedText: {
-    fontSize: 13,
     color: Colors.grey500,
-    fontStyle: 'italic',
+  },
+  profRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  profName: {
+    fontSize: 12,
+    color: Colors.goldDark,
   },
   badge: {
     paddingVertical: 4,

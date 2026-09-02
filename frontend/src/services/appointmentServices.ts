@@ -1,4 +1,4 @@
-﻿import api from './api';
+import api from './api';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -129,6 +129,27 @@ export async function getClientAppointments(
   return data;
 }
 
+// ─── GET /api/v1/establishments/{establishmentId}/appointments ────────────────
+
+/**
+ * Retorna os agendamentos reais do estabelecimento para uma data específica,
+ * opcionalmente filtrando por profissional.
+ */
+export async function getEstablishmentAppointments(
+  establishmentId: string,
+  date: string,
+  professionalId?: string | null
+): Promise<Appointment[]> {
+  const params: Record<string, string> = { date };
+  if (professionalId) params.professionalId = professionalId;
+
+  const { data } = await api.get<Appointment[]>(
+    `/establishments/${establishmentId}/appointments`,
+    { params }
+  );
+  return data;
+}
+
 // ─── GET /api/v1/establishments/{establishmentId}/appointments/available-slots ─
 
 /**
@@ -150,3 +171,4 @@ export async function getAvailableSlots(
   );
   return data;
 }
+

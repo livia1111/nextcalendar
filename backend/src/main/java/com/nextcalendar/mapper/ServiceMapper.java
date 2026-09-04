@@ -34,6 +34,10 @@ public class ServiceMapper {
 
         Optional.ofNullable(dto.duration())
                 .ifPresent(service::setDuration);
+
+        Optional.ofNullable(dto.category())
+                .filter(category -> !category.isBlank())
+                .ifPresent(service::setCategory);
     }
 
     public void updateEntity(ServiceEntity service, ServiceCreateDTO dto) {

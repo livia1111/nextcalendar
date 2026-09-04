@@ -4,17 +4,18 @@ import {getActiveProfessionals, getProfessionals, ProfessionalMin } from '../ser
 export function useProfessional(establishmentId:string){
 
     const [ professionals, setProfessionals]  = useState<ProfessionalMin[]>([])
-    const [error,setError] = useState(null)
+    const [error,setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
     const [mode, setMode] = useState<'active' |'all'>('active')
 
     useEffect(()=>{
         async function getData(){
-           setLoading(true) 
+           setLoading(true)
             if (mode==='active') {
                 try{
                         const response  =  await getActiveProfessionals(establishmentId)
                         setProfessionals(response.content)
+                        setError(null)
 
                     }catch(e){
                         setError('Erro ao carregar profissional');
@@ -25,6 +26,7 @@ export function useProfessional(establishmentId:string){
                 try{
                     const response = await getProfessionals(establishmentId)
                     setProfessionals(response.content)
+                    setError(null)
                 }catch(e){
                     setError('Erro ao carregar profissional')
                 }finally{
@@ -32,7 +34,9 @@ export function useProfessional(establishmentId:string){
                 }
             }
         }
-        getData()
+        if (establishmentId) {
+            getData()
+        }
     },[establishmentId,mode])
 
     return{

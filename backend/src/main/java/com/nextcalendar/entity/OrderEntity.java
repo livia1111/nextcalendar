@@ -1,6 +1,5 @@
 package com.nextcalendar.entity;
 
-
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -11,37 +10,45 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "products")
+@Table(name = "orders")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProductEntity {
+public class OrderEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "establishment_id", nullable = false)
     private EstablishmentEntity establishment;
 
-    @Column(nullable = false)
-    private String name;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "appointment_id", nullable = false, unique = true)
+    private AppointmentEntity appointment;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String category;
+    private OrderStatus status;
+
+    @Enumerated(EnumType.STRING)
+    private PaymentMethod paymentMethod;
 
     @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal price;
+    private BigDecimal discountAmount = BigDecimal.ZERO;
 
-    @Column(nullable = false)
-    private Integer stockQuantity;
+    @Column(precision = 10, scale = 2)
+    private BigDecimal closedTotalAmount;
 
-    @Column(nullable = false)
-    private Boolean active;
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<OrderItemEntity> items = new ArrayList<>();
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
@@ -50,4 +57,6 @@ public class ProductEntity {
     @UpdateTimestamp
     @Column(nullable = false)
     private LocalDateTime updatedAt;
+
+    private LocalDateTime closedAt;
 }

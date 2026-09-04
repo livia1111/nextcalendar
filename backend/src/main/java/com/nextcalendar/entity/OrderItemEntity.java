@@ -1,53 +1,54 @@
 package com.nextcalendar.entity;
 
-
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "products")
+@Table(name = "orders_items")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProductEntity {
+public class OrderItemEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne
-    @JoinColumn(name = "establishment_id", nullable = false)
-    private EstablishmentEntity establishment;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_id", nullable = false)
+    private OrderEntity order;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private OrderItemType itemType;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "service_id")
+    private ServiceEntity service;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_id")
+    private ProductEntity product;
 
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
-    private String category;
-
     @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal price;
+    private BigDecimal unitPrice;
 
     @Column(nullable = false)
-    private Integer stockQuantity;
-
-    @Column(nullable = false)
-    private Boolean active;
+    private Integer quantity;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(nullable = false)
-    private LocalDateTime updatedAt;
 }

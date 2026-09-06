@@ -196,6 +196,17 @@ public class AppointmentService {
     }
 
     @Transactional(readOnly = true)
+    public List<AppointmentResponseDTO> findByEstablishmentAndDate(
+            UUID establishmentId, UUID professionalId, LocalDate date) {
+        LocalDateTime start = date.atStartOfDay();
+        LocalDateTime end = date.plusDays(1).atStartOfDay();
+        return appointmentRepository.findByEstablishmentAndDate(establishmentId, professionalId, start, end)
+                .stream()
+                .map(appointmentMapper::toResponseDTO)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<AppointmentResponseDTO> findByClient(UUID clientId) {
         return appointmentRepository.findByClientIdOrderByStartDateTimeDesc(clientId)
                 .stream()

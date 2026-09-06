@@ -55,6 +55,15 @@ public class AppointmentController implements AppointmentApi {
         return appointmentService.rescheduleAppointment(id, dto);
     }
 
+    @GetMapping
+    public List<AppointmentResponseDTO> findByEstablishmentAndDate(
+            @PathVariable UUID establishmentId,
+            @RequestParam(required = false) UUID professionalId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+    ) {
+        return appointmentService.findByEstablishmentAndDate(establishmentId, professionalId, date);
+    }
+
     @GetMapping("/client/{clientId}")
     public List<AppointmentResponseDTO> findByClient(@PathVariable UUID establishmentId, @PathVariable UUID clientId) {
         return appointmentService.findByClient(clientId);

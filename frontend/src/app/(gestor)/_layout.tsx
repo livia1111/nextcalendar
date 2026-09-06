@@ -39,7 +39,7 @@ export default function GestorTabLayout() {
         tabBarShowLabel: true,
       }}>
       <Tabs.Screen
-        name="agenda"
+        name="homeEmpresa"
         options={{ title: 'Agenda', tabBarIcon: AgendaIcon }}
       />
       <Tabs.Screen

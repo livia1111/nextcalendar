@@ -47,6 +47,14 @@ public interface AppointmentApi {
     })
     AppointmentResponseDTO rescheduleAppointment(UUID establishmentId, UUID id, AppointmentRescheduleDTO dto);
 
+    @Operation(summary = "Listar agendamentos do estabelecimento", description = "Retorna os agendamentos do estabelecimento em uma data específica, opcionalmente filtrando por profissional.")
+    @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso")
+    List<AppointmentResponseDTO> findByEstablishmentAndDate(
+            UUID establishmentId,
+            UUID professionalId,
+            LocalDate date
+    );
+
     @Operation(summary = "Listar agendamentos do cliente", description = "Retorna os agendamentos de um cliente, do mais recente para o mais antigo.")
     @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso")
     List<AppointmentResponseDTO> findByClient(UUID establishmentId, UUID clientId);

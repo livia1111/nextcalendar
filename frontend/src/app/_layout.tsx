@@ -19,7 +19,7 @@ function RootLayoutNav() {
     } else if (user && inAuthGroup) {
       // Está logado e tentou acessar login/register — manda para a home certa do perfil
       if (user.role === 'MANAGER') {
-        router.replace('/(gestor)/agenda' as any);
+        router.replace('/(gestor)/homeEmpresa' as any);
       } else {
         router.replace('/(tabs)/home' as any);
       }

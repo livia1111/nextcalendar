@@ -45,6 +45,21 @@ public interface AppointmentRepository extends JpaRepository<AppointmentEntity, 
             @Param("endDateTime") LocalDateTime endDateTime
     );
 
+    @Query("""
+            SELECT a FROM AppointmentEntity a
+            WHERE a.professional.establishment.id = :establishmentId
+              AND (:professionalId IS NULL OR a.professional.id = :professionalId)
+              AND a.startDateTime >= :startDateTime
+              AND a.startDateTime < :endDateTime
+            ORDER BY a.startDateTime ASC
+            """)
+    List<AppointmentEntity> findByEstablishmentAndDate(
+            @Param("establishmentId") UUID establishmentId,
+            @Param("professionalId") UUID professionalId,
+            @Param("startDateTime") LocalDateTime startDateTime,
+            @Param("endDateTime") LocalDateTime endDateTime
+    );
+
     List<AppointmentEntity> findByProfessionalIdAndStartDateTimeBetween(
             UUID professionalId, LocalDateTime start, LocalDateTime end);
 

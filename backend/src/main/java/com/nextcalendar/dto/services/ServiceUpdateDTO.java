@@ -18,6 +18,9 @@ public record ServiceUpdateDTO(
 
         @NotNull(message = "A duração do serviço é obrigatória.")
         @Positive (message = "A duração deve ser maior que zero.")
-        Integer duration
+        Integer duration,
+
+        @NotBlank(message = "A categoria do serviço é obrigatória.")
+        String category
 
         ) {}

@@ -7,6 +7,7 @@ import com.nextcalendar.entity.TechnicalSheetEntryEntity;
 import com.nextcalendar.entity.TechnicalSheetPhotoEntity;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Component
@@ -29,12 +30,14 @@ public class TechnicalSheetMapper {
         entry.setAppointment(appointment);
         entry.setProfessional(appointment.getProfessional());
         entry.setNotes(notes);
+        entry.setCreatedAt(LocalDateTime.now());
 
         if (photoUrls != null) {
             for (String url : photoUrls) {
                 TechnicalSheetPhotoEntity photo = new TechnicalSheetPhotoEntity();
                 photo.setEntry(entry);
                 photo.setPhotoUrl(url);
+                photo.setCreatedAt(LocalDateTime.now());
                 entry.getPhotos().add(photo);
             }
         }

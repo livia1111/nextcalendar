@@ -38,7 +38,7 @@ import { useProfessional } from '@/hooks/useProfessionals';
 import { type Booking } from '@/services/bookingServices';
 import { getServices, type ServiceResponse } from '@/services/serviceServices';
 import { getClientAppointments, type Appointment } from '@/services/appointmentServices';
-import { getClientByUserId } from '@/services/clientServices';
+import { getClientById, getClientByUserId } from '@/services/clientServices';
 
 function formatAppointmentToBooking(appt: Appointment): Booking {
   const d = new Date(appt.startDateTime);
@@ -79,8 +79,8 @@ export default function HomeScreen() {
   const [selectedProfessionalId, setSelectedProfessionalId] = useState<string | null>(null);
 
   // Estabelecimento padrão atual para o fluxo do cliente
-  const currentTenantId = '96bd4e68-051c-4815-96be-0f7c1c596518';
-  const tenantName = 'Estabelecimento';
+  const currentTenantId = 'dd7460ab-eca5-41b1-a9d6-86fb4661bc97	';
+  
 
   // ── Profissionais ativos do estabelecimento (dados reais do backend) ──────
   const {
@@ -89,42 +89,70 @@ export default function HomeScreen() {
   } = useProfessional(currentTenantId);
 
   // ── Carregamento de dados ────────────────────────────────────────────────
-  const loadHomeData = useCallback(async () => {
-    // 1. Agendamentos reais do cliente
-    if (user?.id) {
-      try {
-        const client = await getClientByUserId(user.id);
-        if (client?.id) {
-          const appointments = await getClientAppointments(currentTenantId, client.id);
-          
-          // Agendamentos futuros ou agendados
-          const upcoming = appointments
-            .filter((a) => a.status === 'SCHEDULED')
-            .sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime())
-            .map(formatAppointmentToBooking);
+const loadHomeData = useCallback(async () => {
+  // 1. Agendamentos reais do cliente
+  if (user?.id) {
+    try {
+      const client = await getClientByUserId(user.id);
 
-          setUpcomingBookings(upcoming);
-          setCompletedBookingsCount(appointments.filter((a) => a.status === 'COMPLETED').length);
-        } else {
-          setUpcomingBookings([]);
-          setCompletedBookingsCount(0);
-        }
-      } catch {
+      if (client?.id) {
+        const appointments = await getClientAppointments(
+          currentTenantId,
+          client.id
+        );
+
+        const now = Date.now();
+
+        // Somente agendamentos SCHEDULED que ainda não passaram
+        const upcoming = appointments
+          .filter((a) => {
+            const startTime = new Date(a.startDateTime).getTime();
+
+            return (
+              a.status === 'SCHEDULED' &&
+              !isNaN(startTime) &&
+              startTime > now
+            );
+          })
+          .sort(
+            (a, b) =>
+              new Date(a.startDateTime).getTime() -
+              new Date(b.startDateTime).getTime()
+          )
+          .map(formatAppointmentToBooking);
+
+        setUpcomingBookings(upcoming);
+
+        // Conta os concluídos
+        setCompletedBookingsCount(
+          appointments.filter((a) => a.status === 'COMPLETED').length
+        );
+      } else {
         setUpcomingBookings([]);
         setCompletedBookingsCount(0);
       }
-    }
+    } catch (error) {
+      console.error('[HOME] Erro ao carregar agendamentos:', error);
 
-    // 2. Serviços cadastrados no estabelecimento
-    if (currentTenantId) {
-      try {
-        const page = await getServices(currentTenantId);
-        setServices(page?.content ?? []);
-      } catch {
-        setServices([]);
-      }
+      setUpcomingBookings([]);
+      setCompletedBookingsCount(0);
     }
-  }, [user?.id, currentTenantId]);
+  } else {
+    setUpcomingBookings([]);
+    setCompletedBookingsCount(0);
+  }
+
+  // 2. Serviços cadastrados no estabelecimento
+  if (currentTenantId) {
+    try {
+      const page = await getServices(currentTenantId);
+      setServices(page?.content ?? []);
+    } catch (error) {
+      console.error('[HOME] Erro ao carregar serviços:', error);
+      setServices([]);
+    }
+  }
+}, [user?.id, currentTenantId]);
 
   // Recarrega sempre que a tela Home ganhar foco (ex: após voltar do agendamento)
   useFocusEffect(
@@ -177,7 +205,7 @@ export default function HomeScreen() {
             <View style={styles.tenantRow}>
               <LocationPinIcon size={14} color={Colors.white} />
               <Text style={[styles.tenantName, { fontFamily: fontSemiBold }]}>
-                {tenantName}
+                {}
               </Text>
             </View>
             <Text style={[styles.greeting, { fontFamily: fontSemiBold }]}>

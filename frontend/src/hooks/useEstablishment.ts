@@ -1,35 +1,54 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { getEstablishmentByOwner } from '@/services/establishmentServices';
+import { getCurrentEstablishment } from '@/services/establishmentServices';
 
 /**
- * Resolve o estabelecimento do gestor logado.
- * Usado por todas as telas da área do gestor (abas) para saber
- * qual establishmentId usar nas chamadas de API.
+ * Resolve o estabelecimento atual do sistema.
+ *
+ * O projeto agora trabalha com apenas um estabelecimento,
+ * portanto o ID não depende do usuário logado.
+ *
+ * O backend é responsável por retornar o estabelecimento ativo.
+ *
+ * Usado pelas telas que precisam saber qual establishmentId
+ * utilizar nas chamadas de API.
  */
 export function useEstablishment() {
-  const { user } = useAuth();
-
   const [establishmentId, setEstablishmentId] = useState<string>('');
-  const [establishmentName, setEstablishmentName] = useState<string>('Minha Barbearia');
+  const [establishmentName, setEstablishmentName] =
+    useState<string>('Minha Barbearia');
   const [loading, setLoading] = useState(true);
 
   const loadEstablishment = useCallback(async () => {
-    if (!user?.id) return;
     try {
-      const est = await getEstablishmentByOwner(user.id);
-      setEstablishmentId(est.id);
-      setEstablishmentName(est.name || 'Minha Barbearia');
-    } catch {
-      // mantém fallback; telas que dependem de establishmentId simplesmente não farão chamadas
+      setLoading(true);
+
+      const establishment = await getCurrentEstablishment();
+
+      setEstablishmentId(establishment.id);
+      setEstablishmentName(
+        establishment.name || 'Minha Barbearia'
+      );
+    } catch (error) {
+      console.error(
+        '[ESTABLISHMENT] Erro ao carregar estabelecimento:',
+        error
+      );
+
+      setEstablishmentId('');
+      setEstablishmentName('Minha Barbearia');
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, []);
 
   useEffect(() => {
     loadEstablishment();
   }, [loadEstablishment]);
 
-  return { establishmentId, establishmentName, loading, reload: loadEstablishment };
+  return {
+    establishmentId,
+    establishmentName,
+    loading,
+    reload: loadEstablishment,
+  };
 }

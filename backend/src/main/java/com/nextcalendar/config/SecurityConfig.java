@@ -2,12 +2,13 @@ package com.nextcalendar.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import org.springframework.http.HttpMethod;
+
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-
-
 
 @Configuration
 public class SecurityConfig {
@@ -18,28 +19,49 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http
+    ) throws Exception {
+
         http
                 .cors(org.springframework.security.config.Customizer.withDefaults())
+
                 .csrf(csrf -> csrf.disable())
+
                 .headers(headers -> headers
-                        .frameOptions(frame -> frame.disable()) // necessário para o H2 Console
+                        .frameOptions(frame -> frame.disable())
                 )
+
                 .authorizeHttpRequests(auth -> auth
-                        // Rotas públicas
+
+                        /*
+                         * Permite o preflight CORS.
+                         *
+                         * O navegador envia OPTIONS antes de
+                         * requisições como PATCH.
+                         */
                         .requestMatchers(
-                                "/api/v1/auth/**",   // login e registro
-                                "/h2-console/**",    // console do banco em dev
-                                "/swagger-ui/**",    // Swagger UI
-                                "/v3/api-docs/**"    // OpenAPI docs
+                                HttpMethod.OPTIONS,
+                                "/**"
                         ).permitAll()
-                        // Todas as outras requerem autenticação
-                        // (por enquanto, permitAll temporário até o filtro JWT estar completo)
+
+                        /*
+                         * Rotas públicas.
+                         */
+                        .requestMatchers(
+                                "/api/v1/auth/**",
+                                "/h2-console/**",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**"
+                        ).permitAll()
+
+                        /*
+                         * Temporariamente liberado enquanto
+                         * o JWT não estiver completo.
+                         */
                         .anyRequest().permitAll()
                 );
 
         return http.build();
     }
-
-
 }

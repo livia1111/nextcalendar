@@ -81,3 +81,17 @@ export async function updateEstablishment(
   const { data } = await api.put<EstablishmentResponse>(`/establishments/${id}`, payload);
   return data;
 }
+
+
+export type Establishment = {
+  id: string;
+  name: string;
+};
+
+export async function getCurrentEstablishment(): Promise<Establishment> {
+  const { data } = await api.get<Establishment>(
+    '/establishments/current'
+  );
+
+  return data;
+}

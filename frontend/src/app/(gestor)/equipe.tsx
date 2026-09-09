@@ -19,17 +19,12 @@ import { useEstablishment } from '@/hooks/useEstablishment';
 import { useProfessional } from '@/hooks/useProfessionals';
 import {
   createProfessional,
+  updateProfessionalAsAdmin,
+  type ProfessionalAdminUpdateInput,
   type ProfessionalCreateInput,
+  type ProfessionalMin,
 } from '@/services/professionalServices';
 
-/**
- * Aba Equipe — gestão de profissionais.
- *
- * NOTA DE COORDENAÇÃO DE TIME: cadastro está funcional (reaproveita
- * AddProfessionalModal já existente). Edição e exclusão de profissional
- * ficam a cargo do Pedro — não adicionar essa lógica aqui para evitar
- * conflito com o trabalho dele em paralelo.
- */
 export default function EquipeScreen() {
   const insets = useSafeAreaInsets();
   const { fontSemiBold, fontRegular } = useAppFonts();
@@ -37,7 +32,8 @@ export default function EquipeScreen() {
 
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedProfessionalId, setSelectedProfessionalId] = useState<string | null>(null);
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  const [selectedProfessional, setSelectedProfessional] = useState<ProfessionalMin | undefined>(undefined);
 
   const {
     professionals,
@@ -54,6 +50,25 @@ export default function EquipeScreen() {
     setRefreshing(false);
   }
 
+  // Abertura do Modal para Cadastro (Botão "+ Adicionar")
+  function handleOpenCreate() {
+    setSelectedProfessional(undefined);
+    setModalMode('create');
+    setModalVisible(true);
+  }
+
+  // Abertura do Modal para Edição (Clique no card do profissional)
+  function handleSelectProfessional(profId: string | null) {
+    if (!profId) return;
+    const found = professionals.find((p) => p.id === profId);
+    if (found) {
+      setSelectedProfessional(found);
+      setModalMode('edit');
+      setModalVisible(true);
+    }
+  }
+
+  // Submissão de novo profissional
   async function handleCreateProfessional(input: ProfessionalCreateInput) {
     if (!establishmentId) {
       Alert.alert('Erro', 'Estabelecimento não encontrado. Tente novamente.');
@@ -62,10 +77,30 @@ export default function EquipeScreen() {
     try {
       await createProfessional(establishmentId, input);
       Alert.alert('Sucesso', `Profissional ${input.name} cadastrado com sucesso!`);
-      setMode('all'); // força re-fetch
+      setMode('all');
       setTimeout(() => setMode('active'), 100);
-    } catch {
-      Alert.alert('Erro', 'Não foi possível cadastrar o profissional. Tente novamente.');
+      setModalVisible(false);
+    } catch (err: any) {
+      Alert.alert('Erro', err?.message || 'Não foi possível cadastrar o profissional.');
+      throw err;
+    }
+  }
+
+  // Atualização dos dados do profissional existente
+  async function handleUpdateProfessional(input: ProfessionalAdminUpdateInput) {
+    if (!establishmentId || !selectedProfessional?.id) {
+      Alert.alert('Erro', 'Profissional ou estabelecimento inválido.');
+      return;
+    }
+    try {
+      await updateProfessionalAsAdmin(establishmentId, selectedProfessional.id, input);
+      Alert.alert('Sucesso', 'Profissional atualizado com sucesso!');
+      setMode('all');
+      setTimeout(() => setMode('active'), 100);
+      setModalVisible(false);
+    } catch (err: any) {
+      Alert.alert('Erro', err?.message || 'Não foi possível salvar as alterações.');
+      throw err;
     }
   }
 
@@ -81,10 +116,14 @@ export default function EquipeScreen() {
     <View style={styles.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24 }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24 },
+        ]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.gold} />
-        }>
+        }
+      >
         <View style={styles.header}>
           <Text style={[styles.title, { fontFamily: fontSemiBold }]}>Equipe</Text>
           <Text style={[styles.subtitle, { fontFamily: fontRegular }]}>
@@ -94,24 +133,22 @@ export default function EquipeScreen() {
 
         <ProfessionalSelector
           professionals={professionals}
-          selectedId={selectedProfessionalId}
-          onSelect={setSelectedProfessionalId}
-          onAddPress={() => setModalVisible(true)}
+          selectedId={selectedProfessional?.id ?? null}
+          onSelect={handleSelectProfessional}
+          onAddPress={handleOpenCreate}
           isLoading={loadingProfessionals}
           hasError={!!errorProfessionals}
         />
-
-        {/*
-          TODO (Pedro): adicionar aqui a listagem completa com edição/exclusão
-          de profissional (updateProfessional / deactivateProfessional já
-          existem prontos em services/professionalServices.ts).
-        */}
       </ScrollView>
 
       <AddProfessionalModal
         visible={modalVisible}
+        mode={modalMode}
+        professional={selectedProfessional}
+        establishmentId={establishmentId}
         onClose={() => setModalVisible(false)}
         onSubmit={handleCreateProfessional}
+        onUpdate={handleUpdateProfessional}
       />
     </View>
   );

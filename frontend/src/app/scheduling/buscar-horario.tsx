@@ -73,7 +73,7 @@ export default function BuscarHorarioScreen() {
   // TODO: TEMPORÁRIO — hardcode pra testar o fluxo do cliente antes de existir
 // a tela de seleção de estabelecimento. Reverter para useEstablishment()
 // (ou o hook certo do lado do cliente) quando esse fluxo existir.
-const establishmentId = 'eacaecc9-20c4-4288-85cf-6ff4d49c3263'; // seu establishmentId de teste
+const establishmentId = 'e1490109-51f7-4f67-8683-05b42266c987'; // seu establishmentId de teste
 const loadingEst = false;
 
   // ── Listas de opções ───────────────────────────────────────────────────────

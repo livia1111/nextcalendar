@@ -58,22 +58,31 @@ export type EstablishmentUpdatePayload = {
   };
 };
 
-// ─── UC02 — Consultar CEP ──────────────────────────────────────────────────
+export type Establishment = {
+  id: string;
+  name: string;
+};
 
+// ─── Constantes de Desenvolvimento ────────────────────────────────────────
+
+// UUID correspondente ao seed populado no data.sql do backend
+const DEFAULT_ESTABLISHMENT_ID = '3fa85f64-5717-4562-b3fc-2c963f66afa6';
+
+// ─── Funções de Serviço (Endpoints REST) ──────────────────────────────────
+
+// UC02 — Consultar CEP via backend/ViaCEP
 export async function consultarCep(cep: string): Promise<CepResponse> {
   const { data } = await api.get<CepResponse>(`/cep/${cep.replace(/\D/g, '')}`);
   return data;
 }
 
-// ─── UC03 — Obter establishment do proprietário ───────────────────────────
-
+// UC03 — Obter estabelecimento do proprietário
 export async function getEstablishmentByOwner(ownerId: string): Promise<EstablishmentResponse> {
   const { data } = await api.get<EstablishmentResponse>(`/establishments/owner/${ownerId}`);
   return data;
 }
 
-// ─── UC06 — Atualizar dados do estabelecimento ────────────────────────────
-
+// UC06 — Atualizar dados do estabelecimento
 export async function updateEstablishment(
   id: string,
   payload: EstablishmentUpdatePayload
@@ -82,16 +91,10 @@ export async function updateEstablishment(
   return data;
 }
 
-
-export type Establishment = {
-  id: string;
-  name: string;
-};
-
+// Obter estabelecimento ativo no contexto local
 export async function getCurrentEstablishment(): Promise<Establishment> {
   const { data } = await api.get<Establishment>(
-    '/establishments/current'
+    `/establishments/${DEFAULT_ESTABLISHMENT_ID}`
   );
-
   return data;
 }

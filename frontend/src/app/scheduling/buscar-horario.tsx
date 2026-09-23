@@ -1,4 +1,4 @@
-﻿import { isAxiosError } from 'axios';
+import { isAxiosError } from 'axios';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CheckCircleIcon, ChevronLeftIcon } from '@/components/icons';
 import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/colors';
+import { DEFAULT_ESTABLISHMENT_ID } from '@/constants/establishment';
 import { useAppFonts } from '@/hooks/use-fonts';
 import { useEstablishment } from '@/hooks/useEstablishment';
 
@@ -226,15 +227,12 @@ export default function BuscarHorarioScreen() {
   //   loading: loadingEst
   // } = useEstablishment();
 
-  // TODO: TEMPORÁRIO — hardcode pra testar
-  // o fluxo do cliente antes de existir
-  // a tela de seleção de estabelecimento.
-  //
-  // Reverter para useEstablishment()
-  // quando esse fluxo existir.
-  const  establishmentId = 'dd7460ab-eca5-41b1-a9d6-86fb4661bc97'
+  // App opera com um único estabelecimento fixo por decisão de escopo — ver
+  // src/constants/establishment.ts
+  const establishmentId = DEFAULT_ESTABLISHMENT_ID;
 
   const loadingEst = false;
+
 
   // ── Listas de opções ───────────────────────────────────────────────────────
 

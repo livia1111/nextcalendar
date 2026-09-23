@@ -32,3 +32,6 @@ build/
 ### VS Code ###
 .vscode/
 application.properties
+
+### H2 file database (gerado em modo FILE — não versionar) ###
+data/

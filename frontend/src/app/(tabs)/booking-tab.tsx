@@ -30,6 +30,7 @@ import {
   XIcon,
 } from '@/components/icons';
 import { Colors } from '@/constants/colors';
+import { DEFAULT_ESTABLISHMENT_ID } from '@/constants/establishment';
 import { useAppFonts } from '@/hooks/use-fonts';
 import { type Booking } from '@/services/bookingServices';
 import {
@@ -113,9 +114,10 @@ export default function BookingTabScreen() {
   /*
    * Tenant atual.
    *
-   * Mantido conforme a implementação atual do projeto.
+   * App opera com um único estabelecimento fixo por decisão de escopo — ver
+   * src/constants/establishment.ts
    */
-  const establishmentId  = 'dd7460ab-eca5-41b1-a9d6-86fb4661bc97';
+  const establishmentId = DEFAULT_ESTABLISHMENT_ID;
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);

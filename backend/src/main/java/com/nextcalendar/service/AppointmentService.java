@@ -136,6 +136,11 @@ public class AppointmentService {
         LocalDateTime start = dto.startDateTime();
         LocalDateTime end = start.plusMinutes(service.getDuration());
 
+        // Rejeitar agendamentos em data/hora já passada
+        if (start.isBefore(LocalDateTime.now())) {
+            throw new BusinessException("Não é possível realizar um agendamento em data ou horário que já passou.");
+        }
+
         boolean isFitIn = Boolean.TRUE.equals(dto.isFitIn());
 
         if (!isFitIn) {
@@ -215,6 +220,11 @@ public class AppointmentService {
     }
 
     private void validateAvailability(UUID professionalId, LocalDateTime start, LocalDateTime end, UUID excludeAppointmentId) {
+
+        // Bloquear horários já passados (protege também chamadas diretas à API)
+        if (start.isBefore(LocalDateTime.now())) {
+            throw new BusinessException("Não é possível realizar agendamento em data ou horário que já passou.");
+        }
 
         WorkingHoursEntity workingHours = findWorkingHoursOrThrow(professionalId, start.getDayOfWeek());
 

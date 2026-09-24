@@ -1,4 +1,4 @@
-﻿import { isAxiosError } from 'axios';
+import { isAxiosError } from 'axios';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -76,82 +76,179 @@ function whErrMsg(err: unknown): string {
   return 'Nao foi possivel salvar. Tente novamente.';
 }
 
-// JornadaForm sub-component
+// ─── JornadaForm — formulário de criação em lote ou edição individual ─────────
+
 interface JornadaFormProps {
+  /** Presente apenas no modo edição individual (clique em ✏️). */
   initial?: WorkingHours;
+  /** Dias já cadastrados — fica desabilitado na seleção múltipla de novos dias. */
   disabledDays?: DayOfWeek[];
-  onSave: (input: WorkingHoursInput) => Promise<void>;
+  onSave: (inputs: WorkingHoursInput[]) => Promise<void>;
   onCancel: () => void;
   fontRegular: string;
   fontSemiBold: string;
 }
+
 function JornadaForm({ initial, disabledDays = [], onSave, onCancel, fontRegular, fontSemiBold }: JornadaFormProps) {
   const isEditing = !!initial;
-  const [day, setDay] = useState<DayOfWeek>(initial?.dayOfWeek ?? 'MONDAY');
+
+  // No modo edição individual os chips ficam fixos (apenas 1 dia selecionado)
+  const [selectedDays, setSelectedDays] = useState<DayOfWeek[]>(
+    isEditing ? [initial!.dayOfWeek] : []
+  );
   const [startTime, setStartTime] = useState(toHHmm(initial?.startTime));
   const [endTime, setEndTime] = useState(toHHmm(initial?.endTime));
   const [breakStart, setBreakStart] = useState(toHHmm(initial?.breakStart));
   const [breakEnd, setBreakEnd] = useState(toHHmm(initial?.breakEnd));
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+
+  /** Alterna seleção de um dia (apenas no modo criação). */
+  function toggleDay(d: DayOfWeek) {
+    if (disabledDays.includes(d)) return;
+    setSelectedDays((prev) =>
+      prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]
+    );
+  }
+
+  /** Atalhos de seleção rápida. */
+  function selectPreset(preset: 'weekdays' | 'weekdaysSat' | 'all' | 'none') {
+    const available = (days: DayOfWeek[]) => days.filter((d) => !disabledDays.includes(d));
+    if (preset === 'weekdays')    setSelectedDays(available(['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY']));
+    if (preset === 'weekdaysSat') setSelectedDays(available(['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY']));
+    if (preset === 'all')         setSelectedDays(available(DAYS_ORDER));
+    if (preset === 'none')        setSelectedDays([]);
+  }
+
+  /** Atalho de horário comercial padrão. */
+  function applyDefaultSchedule() {
+    setStartTime('08:00');
+    setEndTime('18:00');
+    setBreakStart('12:00');
+    setBreakEnd('13:00');
+  }
+
   async function handleSave() {
+    if (isEditing && selectedDays.length === 0) { setFormError('Nenhum dia selecionado.'); return; }
+    if (!isEditing && selectedDays.length === 0) { setFormError('Selecione ao menos um dia da semana.'); return; }
     if (!startTime || !endTime) { setFormError('Informe horario de inicio e termino.'); return; }
     if (breakStart && !breakEnd) { setFormError('Informe tambem o termino da pausa.'); return; }
+    if (!breakStart && breakEnd) { setFormError('Informe tambem o inicio da pausa.'); return; }
     setFormError(''); setSaving(true);
     try {
-      await onSave({ dayOfWeek: day, startTime: toHHmmss(startTime), endTime: toHHmmss(endTime), breakStart: breakStart ? toHHmmss(breakStart) : null, breakEnd: breakEnd ? toHHmmss(breakEnd) : null });
+      const inputs: WorkingHoursInput[] = selectedDays.map((d) => ({
+        dayOfWeek: d,
+        startTime: toHHmmss(startTime),
+        endTime: toHHmmss(endTime),
+        breakStart: breakStart ? toHHmmss(breakStart) : null,
+        breakEnd: breakEnd ? toHHmmss(breakEnd) : null,
+      }));
+      await onSave(inputs);
     } catch (err) { setFormError(whErrMsg(err)); } finally { setSaving(false); }
   }
+
   return (
     <View style={jStyles.formCard}>
+
+      {/* Seleção de dias */}
       {!isEditing && (
         <>
-          <Text style={[jStyles.formLabel, { fontFamily: fontSemiBold }]}>Dia da semana</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={jStyles.dayScroll}>
+          <Text style={[jStyles.formLabel, { fontFamily: fontSemiBold }]}>Dias da semana</Text>
+
+          {/* Chips de seleção múltipla */}
+          <View style={jStyles.dayChipsRow}>
             {DAYS_ORDER.map((d) => {
               const disabled = disabledDays.includes(d);
+              const selected = selectedDays.includes(d);
               return (
-                <TouchableOpacity key={d} disabled={disabled} style={[jStyles.dayChip, day === d && jStyles.dayChipSelected, disabled && jStyles.dayChipDisabled]} onPress={() => setDay(d)}>
-                  <Text style={[jStyles.dayChipText, { fontFamily: fontRegular }, day === d && jStyles.dayChipTextSelected, disabled && jStyles.dayChipTextDisabled]}>{DAY_SHORT[d]}</Text>
+                <TouchableOpacity
+                  key={d}
+                  disabled={disabled}
+                  style={[jStyles.dayChip, selected && jStyles.dayChipSelected, disabled && jStyles.dayChipDisabled]}
+                  onPress={() => toggleDay(d)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[jStyles.dayChipText, { fontFamily: fontRegular }, selected && jStyles.dayChipTextSelected, disabled && jStyles.dayChipTextDisabled]}>
+                    {DAY_SHORT[d]}
+                  </Text>
                 </TouchableOpacity>
               );
             })}
-          </ScrollView>
+          </View>
+
+          {/* Atalhos de seleção rápida */}
+          <View style={jStyles.presetRow}>
+            <TouchableOpacity style={jStyles.presetBtn} onPress={() => selectPreset('weekdays')} activeOpacity={0.7}>
+              <Text style={[jStyles.presetBtnText, { fontFamily: fontRegular }]}>Seg–Sex</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={jStyles.presetBtn} onPress={() => selectPreset('weekdaysSat')} activeOpacity={0.7}>
+              <Text style={[jStyles.presetBtnText, { fontFamily: fontRegular }]}>Seg–Sáb</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={jStyles.presetBtn} onPress={() => selectPreset('all')} activeOpacity={0.7}>
+              <Text style={[jStyles.presetBtnText, { fontFamily: fontRegular }]}>Todos</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[jStyles.presetBtn, jStyles.presetBtnMuted]} onPress={() => selectPreset('none')} activeOpacity={0.7}>
+              <Text style={[jStyles.presetBtnText, { fontFamily: fontRegular, color: Colors.grey500 }]}>Limpar</Text>
+            </TouchableOpacity>
+          </View>
         </>
       )}
+
+      {/* Atalho de horário padrão */}
+      {!isEditing && (
+        <TouchableOpacity style={jStyles.defaultScheduleBtn} onPress={applyDefaultSchedule} activeOpacity={0.8}>
+          <Text style={[jStyles.defaultScheduleBtnText, { fontFamily: fontSemiBold }]}>⏰ Horário comercial  08:00–18:00</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Horário de início e término */}
       <View style={jStyles.timeRow}>
         <View style={{ flex: 1 }}>
           <Text style={[jStyles.formLabel, { fontFamily: fontSemiBold }]}>Inicio</Text>
           <TextInput style={[jStyles.timeInput, { fontFamily: fontRegular }]} placeholder="09:00" placeholderTextColor={Colors.grey400} value={startTime} onChangeText={(t) => setStartTime(maskTime(t))} keyboardType="number-pad" maxLength={5} />
         </View>
-        <View style={jStyles.timeSep}><Text style={{ color: Colors.grey400, fontSize: 18 }}>-</Text></View>
+        <View style={jStyles.timeSep}><Text style={{ color: Colors.grey400, fontSize: 18 }}>–</Text></View>
         <View style={{ flex: 1 }}>
           <Text style={[jStyles.formLabel, { fontFamily: fontSemiBold }]}>Termino</Text>
           <TextInput style={[jStyles.timeInput, { fontFamily: fontRegular }]} placeholder="18:00" placeholderTextColor={Colors.grey400} value={endTime} onChangeText={(t) => setEndTime(maskTime(t))} keyboardType="number-pad" maxLength={5} />
         </View>
       </View>
-      <Text style={[jStyles.formLabel, { fontFamily: fontSemiBold }]}>Pausa <Text style={{ fontFamily: fontRegular, color: Colors.grey400 }}>(opcional)</Text></Text>
+
+      {/* Pausa */}
+      <Text style={[jStyles.formLabel, { fontFamily: fontSemiBold }]}>
+        Pausa <Text style={{ fontFamily: fontRegular, color: Colors.grey400 }}>(opcional)</Text>
+      </Text>
       <View style={jStyles.timeRow}>
         <View style={{ flex: 1 }}>
           <TextInput style={[jStyles.timeInput, { fontFamily: fontRegular }]} placeholder="12:00" placeholderTextColor={Colors.grey400} value={breakStart} onChangeText={(t) => setBreakStart(maskTime(t))} keyboardType="number-pad" maxLength={5} />
         </View>
-        <View style={jStyles.timeSep}><Text style={{ color: Colors.grey400, fontSize: 18 }}>-</Text></View>
+        <View style={jStyles.timeSep}><Text style={{ color: Colors.grey400, fontSize: 18 }}>–</Text></View>
         <View style={{ flex: 1 }}>
           <TextInput style={[jStyles.timeInput, { fontFamily: fontRegular }]} placeholder="13:00" placeholderTextColor={Colors.grey400} value={breakEnd} onChangeText={(t) => setBreakEnd(maskTime(t))} keyboardType="number-pad" maxLength={5} />
         </View>
       </View>
+
       {formError ? <Text style={[jStyles.formError, { fontFamily: fontRegular }]}>{formError}</Text> : null}
+
       <View style={jStyles.formActions}>
-        <TouchableOpacity style={jStyles.cancelBtn} onPress={onCancel} activeOpacity={0.7}><Text style={[jStyles.cancelBtnText, { fontFamily: fontRegular }]}>Cancelar</Text></TouchableOpacity>
+        <TouchableOpacity style={jStyles.cancelBtn} onPress={onCancel} activeOpacity={0.7}>
+          <Text style={[jStyles.cancelBtnText, { fontFamily: fontRegular }]}>Cancelar</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={[jStyles.saveBtn, saving && { opacity: 0.6 }]} onPress={handleSave} disabled={saving} activeOpacity={0.8}>
-          {saving ? <ActivityIndicator color={Colors.white} size="small" /> : <Text style={[jStyles.saveBtnText, { fontFamily: fontSemiBold }]}>Salvar</Text>}
+          {saving
+            ? <ActivityIndicator color={Colors.white} size="small" />
+            : <Text style={[jStyles.saveBtnText, { fontFamily: fontSemiBold }]}>
+                {isEditing ? 'Salvar' : `Salvar${selectedDays.length > 1 ? ` (${selectedDays.length} dias)` : ''}`}
+              </Text>
+          }
         </TouchableOpacity>
       </View>
     </View>
   );
 }
 
-// JornadaTab sub-component
+// ─── JornadaTab ───────────────────────────────────────────────────────────────
+
 interface JornadaTabProps { establishmentId: string; professionalId: string; fontRegular: string; fontSemiBold: string; }
 function JornadaTab({ establishmentId, professionalId, fontRegular, fontSemiBold }: JornadaTabProps) {
   const [hours, setHours] = useState<WorkingHours[]>([]);
@@ -159,6 +256,7 @@ function JornadaTab({ establishmentId, professionalId, fontRegular, fontSemiBold
   const [loadError, setLoadError] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [addingNew, setAddingNew] = useState(false);
+
   async function load() {
     setLoading(true); setLoadError('');
     try { const data = await listWorkingHours(establishmentId, professionalId); setHours(data); }
@@ -166,16 +264,44 @@ function JornadaTab({ establishmentId, professionalId, fontRegular, fontSemiBold
     finally { setLoading(false); }
   }
   useEffect(() => { load(); }, []);
-  async function handleCreate(input: WorkingHoursInput) { await createWorkingHours(establishmentId, professionalId, input); setAddingNew(false); await load(); }
-  async function handleUpdate(id: string, input: WorkingHoursInput) { await updateWorkingHours(establishmentId, professionalId, id, input); setEditingId(null); await load(); }
+
+  /**
+   * Cria ou atualiza múltiplos dias de uma só vez.
+   * Para cada dia selecionado: atualiza se já existir, cria se não existir.
+   */
+  async function handleBatchSave(inputs: WorkingHoursInput[]) {
+    for (const input of inputs) {
+      const existing = hours.find((h) => h.dayOfWeek === input.dayOfWeek);
+      if (existing) {
+        await updateWorkingHours(establishmentId, professionalId, existing.id, input);
+      } else {
+        await createWorkingHours(establishmentId, professionalId, input);
+      }
+    }
+    setAddingNew(false);
+    await load();
+  }
+
+  async function handleUpdate(id: string, inputs: WorkingHoursInput[]) {
+    // Na edição individual sempre chega array de 1 item
+    await updateWorkingHours(establishmentId, professionalId, id, inputs[0]);
+    setEditingId(null);
+    await load();
+  }
+
   function handleDelete(wh: WorkingHours) {
     Alert.alert('Remover jornada', 'Tem certeza que deseja remover a jornada de ' + DAY_LABEL[wh.dayOfWeek] + '?', [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Remover', style: 'destructive', onPress: async () => { try { await deleteWorkingHours(establishmentId, professionalId, wh.id); await load(); } catch { Alert.alert('Erro', 'Nao foi possivel remover a jornada.'); } } },
+      { text: 'Remover', style: 'destructive', onPress: async () => {
+        try { await deleteWorkingHours(establishmentId, professionalId, wh.id); await load(); }
+        catch { Alert.alert('Erro', 'Nao foi possivel remover a jornada.'); }
+      }},
     ]);
   }
+
   const registeredDays = hours.map((h) => h.dayOfWeek);
   const sortedHours = [...hours].sort((a, b) => DAYS_ORDER.indexOf(a.dayOfWeek) - DAYS_ORDER.indexOf(b.dayOfWeek));
+
   if (loading) return <View style={jStyles.centered}><ActivityIndicator color={Colors.gold} /></View>;
   if (loadError) return (
     <View style={jStyles.centered}>
@@ -183,6 +309,7 @@ function JornadaTab({ establishmentId, professionalId, fontRegular, fontSemiBold
       <TouchableOpacity onPress={load} style={jStyles.retryBtn}><Text style={[{ color: Colors.gold, fontSize: 13 }, { fontFamily: fontSemiBold }]}>Tentar novamente</Text></TouchableOpacity>
     </View>
   );
+
   return (
     <View style={jStyles.container}>
       {sortedHours.length === 0 && !addingNew ? (
@@ -191,12 +318,21 @@ function JornadaTab({ establishmentId, professionalId, fontRegular, fontSemiBold
         sortedHours.map((wh) => (
           <View key={wh.id}>
             {editingId === wh.id ? (
-              <JornadaForm initial={wh} onSave={(input) => handleUpdate(wh.id, input)} onCancel={() => setEditingId(null)} fontRegular={fontRegular} fontSemiBold={fontSemiBold} />
+              <JornadaForm
+                initial={wh}
+                onSave={(inputs) => handleUpdate(wh.id, inputs)}
+                onCancel={() => setEditingId(null)}
+                fontRegular={fontRegular}
+                fontSemiBold={fontSemiBold}
+              />
             ) : (
               <View style={jStyles.whRow}>
                 <View style={jStyles.whInfo}>
                   <Text style={[jStyles.whDay, { fontFamily: fontSemiBold }]}>{DAY_LABEL[wh.dayOfWeek]}</Text>
-                  <Text style={[jStyles.whTime, { fontFamily: fontRegular }]}>{toHHmm(wh.startTime)} - {toHHmm(wh.endTime)}{wh.breakStart && wh.breakEnd ? '  pausa ' + toHHmm(wh.breakStart) + '-' + toHHmm(wh.breakEnd) : ''}</Text>
+                  <Text style={[jStyles.whTime, { fontFamily: fontRegular }]}>
+                    {toHHmm(wh.startTime)} – {toHHmm(wh.endTime)}
+                    {wh.breakStart && wh.breakEnd ? '  ·  pausa ' + toHHmm(wh.breakStart) + '–' + toHHmm(wh.breakEnd) : ''}
+                  </Text>
                 </View>
                 <View style={jStyles.whActions}>
                   <TouchableOpacity onPress={() => { setAddingNew(false); setEditingId(wh.id); }} style={jStyles.iconBtn} activeOpacity={0.7}><Text style={jStyles.iconBtnText}>✏️</Text></TouchableOpacity>
@@ -208,7 +344,13 @@ function JornadaTab({ establishmentId, professionalId, fontRegular, fontSemiBold
         ))
       )}
       {addingNew ? (
-        <JornadaForm disabledDays={registeredDays} onSave={handleCreate} onCancel={() => setAddingNew(false)} fontRegular={fontRegular} fontSemiBold={fontSemiBold} />
+        <JornadaForm
+          disabledDays={registeredDays}
+          onSave={handleBatchSave}
+          onCancel={() => setAddingNew(false)}
+          fontRegular={fontRegular}
+          fontSemiBold={fontSemiBold}
+        />
       ) : (
         registeredDays.length < 7 && (
           <TouchableOpacity style={jStyles.addBtn} onPress={() => { setEditingId(null); setAddingNew(true); }} activeOpacity={0.8}>
@@ -377,13 +519,24 @@ const jStyles = StyleSheet.create({
   formCard: { backgroundColor: Colors.surface, borderRadius: 14, padding: 16, gap: 12, borderWidth: 1, borderColor: Colors.grey100 },
   formLabel: { fontSize: 13, color: Colors.grey500 },
   formError: { fontSize: 12, color: Colors.error },
+  // Chips de dia — agora em grid ao invés de scroll horizontal
   dayScroll: { flexGrow: 0 },
-  dayChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, borderWidth: 1.5, borderColor: Colors.grey200, backgroundColor: Colors.white, marginRight: 6 },
+  dayChipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  dayChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, borderWidth: 1.5, borderColor: Colors.grey200, backgroundColor: Colors.white },
   dayChipSelected: { borderColor: Colors.gold, backgroundColor: Colors.gold },
   dayChipDisabled: { borderColor: Colors.grey100, backgroundColor: Colors.grey100, opacity: 0.5 },
   dayChipText: { fontSize: 12, color: Colors.dark },
   dayChipTextSelected: { color: Colors.white },
   dayChipTextDisabled: { color: Colors.grey400 },
+  // Atalhos de seleção rápida
+  presetRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  presetBtn: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, backgroundColor: Colors.white, borderWidth: 1, borderColor: Colors.grey200 },
+  presetBtnMuted: { backgroundColor: Colors.surface },
+  presetBtnText: { fontSize: 11, color: Colors.dark },
+  // Atalho de horário padrão
+  defaultScheduleBtn: { paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10, backgroundColor: Colors.white, borderWidth: 1.5, borderColor: Colors.gold, alignItems: 'center' },
+  defaultScheduleBtnText: { fontSize: 13, color: Colors.gold },
+  // Horários
   timeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   timeSep: { alignItems: 'center', paddingTop: 4 },
   timeInput: { height: 44, borderRadius: 10, borderWidth: 1.5, borderColor: Colors.grey200, backgroundColor: Colors.white, paddingHorizontal: 14, fontSize: 15, color: Colors.dark, textAlign: 'center' },
@@ -393,3 +546,4 @@ const jStyles = StyleSheet.create({
   saveBtn: { flex: 1, paddingVertical: 12, borderRadius: 10, alignItems: 'center', backgroundColor: Colors.gold },
   saveBtnText: { fontSize: 14, color: Colors.white },
 });
+

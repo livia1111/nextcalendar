@@ -37,6 +37,13 @@ import {
   type ServiceResponse,
 } from '@/services/serviceServices';
 
+import {
+  buildStartDateTime,
+  isPastDay,
+  isPastDateTime,
+  toDateString,
+} from '@/utils/dateValidation';
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const MONTHS = [
@@ -67,96 +74,6 @@ function buildCalendar(year: number, month: number): (number | null)[] {
   }
 
   return cells;
-}
-
-/**
- * Formata a data selecionada como "YYYY-MM-DD" para a API.
- */
-function toDateString(
-  year: number,
-  month: number,
-  day: number
-): string {
-  const mm = String(month + 1).padStart(2, '0');
-  const dd = String(day).padStart(2, '0');
-
-  return `${year}-${mm}-${dd}`;
-}
-
-/**
- * Combina a data "YYYY-MM-DD" com um slot retornado pelo backend.
- *
- * O backend pode retornar "HH:mm" ou um ISO 8601 completo.
- */
-function buildStartDateTime(
-  dateStr: string,
-  slot: string
-): string {
-  // Slot já é ISO completo
-  if (slot.includes('T') || slot.includes('Z')) {
-    return slot;
-  }
-
-  // Extrai apenas HH:mm caso venha HH:mm:ss ou HH:mm
-  const timePart = slot.slice(0, 5);
-
-  return `${dateStr}T${timePart}:00`;
-}
-
-/**
- * Verifica se um dia do calendário é anterior à data de hoje
- * (apenas para remarcação).
- */
-function isPastDay(
-  isReschedule: boolean,
-  year: number,
-  month: number,
-  day: number
-): boolean {
-  if (!isReschedule) return false;
-
-  const now = new Date();
-
-  const selectedDate = new Date(
-    year,
-    month,
-    day
-  );
-
-  const todayDate = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate()
-  );
-
-  return selectedDate < todayDate;
-}
-
-/**
- * Verifica se um determinado horário em um dia é
- * anterior ou igual a agora (apenas para remarcação).
- */
-function isPastDateTime(
-  isReschedule: boolean,
-  year: number,
-  month: number,
-  day: number,
-  slot: string
-): boolean {
-  if (!isReschedule) return false;
-
-  const dateStr = toDateString(
-    year,
-    month,
-    day
-  );
-
-  const startDateTime = buildStartDateTime(
-    dateStr,
-    slot
-  );
-
-  return new Date(startDateTime).getTime() <= Date.now();
 }
 
 /**
@@ -500,24 +417,25 @@ export default function BuscarHorarioScreen() {
         slot
       );
 
+    // Não permitir agendamento ou remarcação para horário que já passou
+    if (
+      new Date(
+        startDateTime
+      ).getTime() <= Date.now()
+    ) {
+      Alert.alert(
+        'Horário inválido',
+        isReschedule
+          ? 'Não é possível remarcar para um horário que já passou.'
+          : 'Não é possível agendar em uma data ou horário que já passou.'
+      );
+
+      return;
+    }
+
     // ── Modo remarcação ──────────────────────────────────────────────────────
 
     if (isReschedule) {
-      // Não permitir remarcar para
-      // horário que já passou
-      if (
-        new Date(
-          startDateTime
-        ).getTime() <= Date.now()
-      ) {
-        Alert.alert(
-          'Horário inválido',
-          'Não é possível remarcar para um horário que já passou.'
-        );
-
-        return;
-      }
-
       // Evita múltiplos cliques
       // simultâneos
       if (isSubmittingReschedule) {
@@ -1084,7 +1002,6 @@ export default function BuscarHorarioScreen() {
                 (day, idx) => {
                   const dayPast = day
                     ? isPastDay(
-                        isReschedule,
                         year,
                         month,
                         day
@@ -1325,7 +1242,6 @@ export default function BuscarHorarioScreen() {
                         const slotPast =
                           selectedDay
                             ? isPastDateTime(
-                                isReschedule,
                                 year,
                                 month,
                                 selectedDay,

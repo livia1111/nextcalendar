@@ -51,6 +51,12 @@ public class ProfessionalService {
                 .orElseThrow(() -> new EntityNotFoundException("Profissional", id));
     }
 
+    public ProfessionalMeResponseDTO getMyProfile(UUID userId) {
+        ProfessionalEntity professional = professionalRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Profissional vinculado ao usuário", userId));
+        return new ProfessionalMeResponseDTO(professional);
+    }
+
     @Transactional
     public ProfessionalProfileResponseDTO createProfessional(UUID establishmentId, ProfessionalCreateDTO dto) {
 

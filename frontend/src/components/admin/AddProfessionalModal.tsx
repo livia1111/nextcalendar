@@ -289,14 +289,41 @@ function JornadaTab({ establishmentId, professionalId, fontRegular, fontSemiBold
     await load();
   }
 
+  async function doDelete(wh: WorkingHours) {
+    try {
+      await deleteWorkingHours(establishmentId, professionalId, wh.id);
+      await load();
+    } catch {
+      Alert.alert('Erro', 'Nao foi possivel remover a jornada.');
+    }
+  }
+
   function handleDelete(wh: WorkingHours) {
-    Alert.alert('Remover jornada', 'Tem certeza que deseja remover a jornada de ' + DAY_LABEL[wh.dayOfWeek] + '?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Remover', style: 'destructive', onPress: async () => {
-        try { await deleteWorkingHours(establishmentId, professionalId, wh.id); await load(); }
-        catch { Alert.alert('Erro', 'Nao foi possivel remover a jornada.'); }
-      }},
-    ]);
+    // Alert.alert com múltiplos botões não funciona de forma confiável na web
+    // (react-native-web não implementa os callbacks de botão). Por isso,
+    // usamos window.confirm() nativo do navegador quando rodando na web.
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(
+        `Remover jornada de ${DAY_LABEL[wh.dayOfWeek]}? Esta ação não pode ser desfeita.`
+      );
+      if (confirmed) {
+        doDelete(wh);
+      }
+      return;
+    }
+
+    Alert.alert(
+      'Remover jornada',
+      'Tem certeza que deseja remover a jornada de ' + DAY_LABEL[wh.dayOfWeek] + '?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Remover',
+          style: 'destructive',
+          onPress: () => doDelete(wh),
+        },
+      ]
+    );
   }
 
   const registeredDays = hours.map((h) => h.dayOfWeek);

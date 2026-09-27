@@ -89,3 +89,9 @@ frontend/.env.*
 /android
 *.GUIA_DESENVOLVIMENTO.md
 *.README.md
+
+
+# env files (can opt-in via .env.example)
+.env*.local
+.env
+.env.*

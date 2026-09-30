@@ -10,6 +10,12 @@ export type Booking = {
   price: string;
   status: 'upcoming' | 'done' | 'cancelled';
   reminder?: boolean;
+  /** ISO 8601 original do agendamento — usado para calcular a janela de remarcação de 2h. */
+  startDateTimeRaw?: string;
+  /** ID do profissional original — propagado para o fluxo de remarcação. */
+  professionalId?: string;
+  /** ID do serviço original — propagado para o fluxo de remarcação. */
+  serviceId?: string;
 };
 
 /**

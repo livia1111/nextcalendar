@@ -15,6 +15,8 @@ import com.nextcalendar.exception.EntityNotFoundException;
 import com.nextcalendar.mapper.EstablishmentMapper;
 import com.nextcalendar.repository.EstablishmentRepository;
 import com.nextcalendar.repository.ProfileRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +27,7 @@ import java.util.UUID;
 @Service
 public class EstablishmentService {
 
+    private static final Logger log = LoggerFactory.getLogger(EstablishmentService.class);
     private static final int TRIAL_DAYS = 30;
 
     private final EstablishmentRepository establishmentRepository;

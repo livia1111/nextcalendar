@@ -11,22 +11,11 @@ public class WebConfig implements WebMvcConfigurer {
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
                 .allowedOrigins(
-                        "http://localhost:8081",
-                        "http://localhost:8085",
-                        "http://localhost:19006",
-                        "http://127.0.0.1:8081",
-                        "http://127.0.0.1:8085",
-                        "http://127.0.0.1:19006"
+                        "http://localhost:8081",  // Expo Web padrão
+                        "http://localhost:8085",  // frontend-barbearia
+                        "http://localhost:19006"  // Expo Web alternativo
                 )
-                .allowedMethods(
-                        "GET",
-                        "POST",
-                        "PUT",
-                        "PATCH",
-                        "DELETE",
-                        "OPTIONS",
-                        "HEAD"
-                )
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "TRACE", "CONNECT")
                 .allowedHeaders("*")
                 .allowCredentials(true);
     }

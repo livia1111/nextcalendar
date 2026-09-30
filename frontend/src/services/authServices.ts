@@ -7,6 +7,7 @@ type LoginResponse = {
     name: string;
     email: string;
     role: 'CUSTOMER' | 'MANAGER' | 'PROFESSIONAL';
+    mustChangePassword: boolean;
   };
 };
 
@@ -50,4 +51,16 @@ export async function register(
 export async function registerEmpresa(payload: Record<string, any>): Promise<LoginResponse> {
   const { data } = await api.post<LoginResponse>('/auth/register', payload);
   return data;
+}
+
+/**
+ * POST /api/v1/auth/change-password
+ * Autenticado via header Authorization (configurado no interceptor do api.ts).
+ * Nunca envia userId no payload.
+ */
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string
+): Promise<void> {
+  await api.post('/auth/change-password', { currentPassword, newPassword });
 }

@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -27,12 +28,12 @@ import {
 
 export default function EquipeScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { fontSemiBold, fontRegular } = useAppFonts();
   const { establishmentId, loading: loadingEstablishment, reload } = useEstablishment();
 
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedProfessional, setSelectedProfessional] = useState<ProfessionalMin | undefined>(undefined);
 
   const {
@@ -57,15 +58,10 @@ export default function EquipeScreen() {
     setModalVisible(true);
   }
 
-  // Abertura do Modal para Edição (Clique no card do profissional)
+  // Clique no card do profissional → navega para a tela de detalhe
   function handleSelectProfessional(profId: string | null) {
     if (!profId) return;
-    const found = professionals.find((p) => p.id === profId);
-    if (found) {
-      setSelectedProfessional(found);
-      setModalMode('edit');
-      setModalVisible(true);
-    }
+    router.push(`/(gestor)/profissional/${profId}` as any);
   }
 
   // Submissão de novo profissional
@@ -143,7 +139,7 @@ export default function EquipeScreen() {
 
       <AddProfessionalModal
         visible={modalVisible}
-        mode={modalMode}
+        mode="create"
         professional={selectedProfessional}
         establishmentId={establishmentId}
         onClose={() => setModalVisible(false)}

@@ -101,6 +101,12 @@ public class AppointmentService {
             LocalDateTime slotStartDT = date.atTime(cursor);
             LocalDateTime slotEndDT = date.atTime(slotEnd);
 
+            // Pula slots que já passaram
+            if (slotStartDT.isBefore(LocalDateTime.now())) {
+                cursor = cursor.plusMinutes(SLOT_STEP_MINUTES);
+                continue;
+            }
+
             boolean duringLunch = workingHours.getBreakStart() != null
                     && cursor.isBefore(workingHours.getBreakEnd())
                     && slotEnd.isAfter(workingHours.getBreakStart());
@@ -135,6 +141,10 @@ public class AppointmentService {
 
         LocalDateTime start = dto.startDateTime();
         LocalDateTime end = start.plusMinutes(service.getDuration());
+
+        if (start.isBefore(LocalDateTime.now())) {
+            throw new BusinessException("Não é possível agendar para uma data/horário que já passou.");
+        }
 
         boolean isFitIn = Boolean.TRUE.equals(dto.isFitIn());
 
@@ -184,6 +194,10 @@ public class AppointmentService {
         int durationMinutes = appointment.getService().getDuration();
         LocalDateTime newStart = dto.newStartDateTime();
         LocalDateTime newEnd = newStart.plusMinutes(durationMinutes);
+
+        if (newStart.isBefore(LocalDateTime.now())) {
+            throw new BusinessException("Não é possível reagendar para uma data/horário que já passou.");
+        }
 
         validateAvailability(appointment.getProfessional().getId(), newStart, newEnd, id);
 

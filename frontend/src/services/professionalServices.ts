@@ -7,10 +7,11 @@ export type ProfessionalMin = {
   id: string;
   name: string;
   nickname?: string;
-  phone?: string;
+  cpf?: string;
   email?: string;
+  phone?: string;
   photoUrl?: string | null;
-  specialty?: string;
+  specialty?: string;  // campo local/visual — não existe no backend, mantido para compatibilidade de UI
   active?: boolean;
   commission?: number;
 };

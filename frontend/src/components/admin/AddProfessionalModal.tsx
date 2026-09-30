@@ -51,6 +51,21 @@ function formatCpf(val: string): string {
   const d = val.replace(/\D/g, '').slice(0, 11);
   return d.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
 }
+
+/** Valida os dígitos verificadores de um CPF brasileiro. */
+function isValidCpf(val: string): boolean {
+  const d = val.replace(/\D/g, '');
+  if (d.length !== 11) return false;
+  // Rejeita sequências triviais (ex: 111.111.111-11)
+  if (/^(\d)\1{10}$/.test(d)) return false;
+  const calcDigit = (base: string, len: number): number => {
+    let sum = 0;
+    for (let i = 0; i < len; i++) sum += parseInt(base[i]) * (len + 1 - i);
+    const rem = (sum * 10) % 11;
+    return rem === 10 ? 0 : rem;
+  };
+  return calcDigit(d, 9) === parseInt(d[9]) && calcDigit(d, 10) === parseInt(d[10]);
+}
 function maskTime(raw: string): string {
   const d = raw.replace(/\D/g, '').slice(0, 4);
   if (d.length <= 2) return d;
@@ -114,10 +129,10 @@ function JornadaForm({ initial, disabledDays = [], onSave, onCancel, fontRegular
   /** Atalhos de seleção rápida. */
   function selectPreset(preset: 'weekdays' | 'weekdaysSat' | 'all' | 'none') {
     const available = (days: DayOfWeek[]) => days.filter((d) => !disabledDays.includes(d));
-    if (preset === 'weekdays')    setSelectedDays(available(['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY']));
-    if (preset === 'weekdaysSat') setSelectedDays(available(['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY']));
-    if (preset === 'all')         setSelectedDays(available(DAYS_ORDER));
-    if (preset === 'none')        setSelectedDays([]);
+    if (preset === 'weekdays') setSelectedDays(available(['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']));
+    if (preset === 'weekdaysSat') setSelectedDays(available(['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY']));
+    if (preset === 'all') setSelectedDays(available(DAYS_ORDER));
+    if (preset === 'none') setSelectedDays([]);
   }
 
   /** Atalho de horário comercial padrão. */
@@ -238,8 +253,8 @@ function JornadaForm({ initial, disabledDays = [], onSave, onCancel, fontRegular
           {saving
             ? <ActivityIndicator color={Colors.white} size="small" />
             : <Text style={[jStyles.saveBtnText, { fontFamily: fontSemiBold }]}>
-                {isEditing ? 'Salvar' : `Salvar${selectedDays.length > 1 ? ` (${selectedDays.length} dias)` : ''}`}
-              </Text>
+              {isEditing ? 'Salvar' : `Salvar${selectedDays.length > 1 ? ` (${selectedDays.length} dias)` : ''}`}
+            </Text>
           }
         </TouchableOpacity>
       </View>
@@ -398,10 +413,11 @@ interface AddProfessionalModalProps {
   professional?: ProfessionalMin;
   establishmentId?: string;
   onUpdate?: (data: ProfessionalAdminUpdateInput) => Promise<void>;
+  onDelete?: (id: string) => Promise<void>;
 }
 
 export function AddProfessionalModal({
-  visible, onClose, onSubmit, mode = 'create', professional, establishmentId, onUpdate,
+  visible, onClose, onSubmit, mode = 'create', professional, establishmentId, onUpdate, onDelete,
 }: AddProfessionalModalProps) {
   const { fontSemiBold, fontRegular } = useAppFonts();
   const isEdit = mode === 'edit';
@@ -420,9 +436,15 @@ export function AddProfessionalModal({
   useEffect(() => {
     if (visible && !prevVisible.current) {
       if (isEdit && professional) {
-        setName(professional.name ?? ''); setNickname(professional.nickname ?? '');
-        setSpecialty(professional.specialty ?? ''); setPhone(professional.phone ?? '');
-        setEmail(professional.email ?? ''); setCommission(String(professional.commission ?? 50));
+        // ProfessionalDetailsResponseDTO possui: id, name, nickname, cpf, email,
+        // phone, gender, photoUrl, commission, active, createdAt, updatedAt.
+        // O campo 'specialty' não existe no backend — mantido como campo local de UI.
+        setName(professional.name ?? '');
+        setNickname(professional.nickname ?? '');
+        setSpecialty(professional.specialty ?? '');  // campo local, sempre vazio vindo da API
+        setPhone(formatPhone(professional.phone ?? ''));
+        setEmail(professional.email ?? '');
+        setCommission(String(professional.commission ?? 50));
       } else { resetForm(); }
       setActiveTab('dados');
     }
@@ -432,25 +454,116 @@ export function AddProfessionalModal({
   function resetForm() { setName(''); setNickname(''); setSpecialty(''); setCpf(''); setPhone(''); setEmail(''); setCommission('50'); setError(''); }
 
   async function handleCreate() {
-    if (!name.trim()) { setError('O nome do profissional e obrigatorio.'); return; }
-    if (!email.trim() || !email.includes('@')) { setError('Informe um e-mail valido.'); return; }
-    if (!phone.trim()) { setError('Informe um telefone de contato.'); return; }
+    // Validação: nome completo (mínimo nome + sobrenome)
+    if (!name.trim()) { setError('O nome do profissional é obrigatório.'); return; }
+    if (name.trim().split(/\s+/).length < 2) { setError('Por favor, informe o nome completo (nome e sobrenome).'); return; }
+    if (!email.trim() || !email.includes('@')) { setError('Informe um e-mail válido.'); return; }
+    // Validação de telefone (padrão BR: 10 ou 11 dígitos)
+    const phoneDigits = phone.replace(/\D/g, '');
+    if (!phoneDigits) { setError('O telefone é obrigatório.'); return; }
+    if (phoneDigits.length < 10 || phoneDigits.length > 11) { setError('Telefone incompleto. Digite o número completo com DDD (10 ou 11 dígitos).'); return; }
+    // Validação de CPF
+    const cpfDigits = cpf.replace(/\D/g, '');
+    if (!cpfDigits || cpfDigits.length < 11) { setError('O CPF é obrigatório.'); return; }
+    if (!isValidCpf(cpfDigits)) { setError('CPF inválido. Verifique os dígitos informados.'); return; }
     setError(''); setSubmitting(true);
     try {
-      await onSubmit({ name: name.trim(), nickname: nickname.trim() || undefined, specialty: specialty.trim() || 'Profissional', cpf: cpf.replace(/\D/g, '') || '000.000.000-00', phone: phone.trim(), email: email.trim(), password: 'TempPassword123!', commission: Number(commission) || 50 });
+      await onSubmit({ name: name.trim(), nickname: nickname.trim() || undefined, specialty: specialty.trim() || 'Profissional', cpf: cpfDigits, phone: phone.trim(), email: email.trim(), password: 'TempPassword123!', commission: Number(commission) || 50 });
       resetForm(); onClose();
-    } catch (err: any) { setError(err?.message || 'Nao foi possivel cadastrar o profissional.'); }
+    } catch (err: any) {
+      if (isAxiosError(err)) {
+        const status = err.response?.status;
+        const backendMessage =
+          err.response?.data?.message ||
+          (typeof err.response?.data === 'string' ? err.response?.data : null);
+        if (backendMessage) {
+          setError(backendMessage);
+        } else if (status === 422) {
+          setError('Dados inválidos. Verifique se o CPF, telefone e e-mail estão corretos.');
+        } else if (status === 400) {
+          setError('Não foi possível cadastrar o profissional. Verifique os dados informados.');
+        } else {
+          setError('Não foi possível cadastrar o profissional. Tente novamente.');
+        }
+      } else {
+        setError('Não foi possível cadastrar o profissional. Tente novamente.');
+      }
+    }
     finally { setSubmitting(false); }
   }
 
   async function handleUpdate() {
-    if (!name.trim()) { setError('O nome do profissional e obrigatorio.'); return; }
+    if (!name.trim()) { setError('O nome do profissional é obrigatório.'); return; }
+    if (name.trim().split(/\s+/).length < 2) { setError('Por favor, informe o nome completo (nome e sobrenome).'); return; }
+    // Validação de telefone (padrão BR: 10 ou 11 dígitos) — só valida se preenchido na edição
+    if (phone.trim()) {
+      const phoneDigits = phone.replace(/\D/g, '');
+      if (phoneDigits.length < 10 || phoneDigits.length > 11) { setError('Telefone incompleto. Digite o número completo com DDD (10 ou 11 dígitos).'); return; }
+    }
     if (!onUpdate) return;
     setError(''); setSubmitting(true);
     try {
       await onUpdate({ name: name.trim(), nickname: nickname.trim() || undefined, specialty: specialty.trim() || undefined, phone: phone.trim() || undefined, email: email.trim() || undefined, commission: Number(commission) || undefined });
-    } catch (err: any) { setError(err?.message || 'Nao foi possivel salvar as alteracoes.'); }
+    } catch (err: any) {
+      if (isAxiosError(err)) {
+        const status = err.response?.status;
+        const backendMessage =
+          err.response?.data?.message ||
+          (typeof err.response?.data === 'string' ? err.response?.data : null);
+        if (backendMessage) {
+          setError(backendMessage);
+        } else if (status === 422) {
+          setError('Dados inválidos. Verifique as informações e tente novamente.');
+        } else {
+          setError('Não foi possível salvar as alterações. Tente novamente.');
+        }
+      } else {
+        setError('Não foi possível salvar as alterações. Tente novamente.');
+      }
+    }
     finally { setSubmitting(false); }
+  }
+
+  function handleDeleteProfessional() {
+    if (!professional?.id || !onDelete) return;
+    const profId = professional.id;
+    const profName = professional.name ?? 'este profissional';
+    const message = `Tem certeza da exclusão? Os dados de ${profName} serão excluídos permanentemente.`;
+
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(message);
+      if (confirmed) doDelete(profId);
+      return;
+    }
+
+    Alert.alert(
+      'Excluir Profissional',
+      message,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Excluir', style: 'destructive', onPress: () => doDelete(profId) },
+      ]
+    );
+  }
+
+  async function doDelete(profId: string) {
+    setSubmitting(true);
+    try {
+      await onDelete!(profId);
+      resetForm();
+      onClose();
+    } catch (err: any) {
+      if (isAxiosError(err)) {
+        const backendMessage =
+          err.response?.data?.message ||
+          (typeof err.response?.data === 'string' ? err.response?.data : null);
+        setError(backendMessage || 'Não foi possível excluir o profissional.');
+      } else {
+        setError('Não foi possível excluir o profissional.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -487,18 +600,28 @@ export function AddProfessionalModal({
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.formContent} keyboardShouldPersistTaps="handled">
               <InputField label="Nome completo *" placeholder="Ex: Carlos Silva" value={name} onChangeText={setName} />
               <View style={styles.row}>
-                <View style={{ flex: 1 }}><InputField label="Apelido / Exibicao" placeholder="Ex: Carlinhos" value={nickname} onChangeText={setNickname} /></View>
+                <View style={{ flex: 1 }}><InputField label="Apelido / Exibição" placeholder="Ex: Carlinhos" value={nickname} onChangeText={setNickname} /></View>
                 <View style={{ flex: 1 }}><InputField label="Especialidade" placeholder="Ex: Barbeiro Master" value={specialty} onChangeText={setSpecialty} /></View>
               </View>
               <InputField label="E-mail *" placeholder="carlos@barbearia.com" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
               <View style={styles.row}>
                 <View style={{ flex: 1 }}><InputField label="Telefone / Celular *" placeholder="(99) 99999-9999" value={phone} onChangeText={(t) => setPhone(formatPhone(t))} keyboardType="phone-pad" /></View>
-                {!isEdit && <View style={{ flex: 1 }}><InputField label="CPF" placeholder="000.000.000-00" value={cpf} onChangeText={(t) => setCpf(formatCpf(t))} keyboardType="number-pad" /></View>}
+                {!isEdit && <View style={{ flex: 1 }}><InputField label="CPF *" placeholder="000.000.000-00" value={cpf} onChangeText={(t) => setCpf(formatCpf(t))} keyboardType="number-pad" /></View>}
               </View>
-              <InputField label="Comissao Padrao (%)" placeholder="Ex: 50" value={commission} onChangeText={setCommission} keyboardType="number-pad" />
+              <InputField label="Comissão Padrão (%)" placeholder="Ex: 50" value={commission} onChangeText={setCommission} keyboardType="number-pad" />
               {error ? <Text style={[styles.errorText, { fontFamily: fontRegular }]}>{error}</Text> : null}
               <View style={styles.actions}>
                 <Button label={submitting ? 'Salvando...' : isEdit ? 'Salvar Dados' : 'Cadastrar Profissional'} onPress={isEdit ? handleUpdate : handleCreate} disabled={submitting} />
+                {isEdit && onDelete && (
+                  <TouchableOpacity
+                    style={[styles.deleteBtn, submitting && { opacity: 0.5 }]}
+                    onPress={handleDeleteProfessional}
+                    disabled={submitting}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={[styles.deleteBtnText, { fontFamily: fontSemiBold }]}>🗑 Excluir Profissional</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </ScrollView>
           )}
@@ -524,7 +647,9 @@ const styles = StyleSheet.create({
   formContent: { paddingHorizontal: 24, paddingTop: 18, gap: 16, paddingBottom: 8 },
   row: { flexDirection: 'row', gap: 12 },
   errorText: { color: Colors.error, fontSize: 13, textAlign: 'center' },
-  actions: { marginTop: 8, paddingBottom: 12 },
+  actions: { marginTop: 8, paddingBottom: 12, gap: 10 },
+  deleteBtn: { marginTop: 6, paddingVertical: 13, borderRadius: 12, alignItems: 'center', backgroundColor: '#DC2626' },
+  deleteBtnText: { fontSize: 14, color: '#FFFFFF' },
 });
 
 const jStyles = StyleSheet.create({

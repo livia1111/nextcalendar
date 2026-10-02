@@ -152,7 +152,7 @@ function DurationPicker({ value, onChange, fontRegular, fontSemiBold }: Duration
 
 const dp = StyleSheet.create({
   wrapper: { gap: 6 },
-  label: { fontSize: 13, color: Colors.grey500 },
+  label: { fontSize: 13, color: Colors.dark },
   trigger: {
     height: 48, borderRadius: 10, borderWidth: 1.5, borderColor: Colors.grey200,
     backgroundColor: Colors.white, paddingHorizontal: 14, flexDirection: 'row',

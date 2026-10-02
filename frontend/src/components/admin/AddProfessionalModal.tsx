@@ -436,12 +436,9 @@ export function AddProfessionalModal({
   useEffect(() => {
     if (visible && !prevVisible.current) {
       if (isEdit && professional) {
-        // ProfessionalDetailsResponseDTO possui: id, name, nickname, cpf, email,
-        // phone, gender, photoUrl, commission, active, createdAt, updatedAt.
-        // O campo 'specialty' não existe no backend — mantido como campo local de UI.
         setName(professional.name ?? '');
         setNickname(professional.nickname ?? '');
-        setSpecialty(professional.specialty ?? '');  // campo local, sempre vazio vindo da API
+        setSpecialty(professional.specialty ?? '');
         setPhone(formatPhone(professional.phone ?? ''));
         setEmail(professional.email ?? '');
         setCommission(String(professional.commission ?? 50));
@@ -468,7 +465,7 @@ export function AddProfessionalModal({
     if (!isValidCpf(cpfDigits)) { setError('CPF inválido. Verifique os dígitos informados.'); return; }
     setError(''); setSubmitting(true);
     try {
-      await onSubmit({ name: name.trim(), nickname: nickname.trim() || undefined, specialty: specialty.trim() || 'Profissional', cpf: cpfDigits, phone: phone.trim(), email: email.trim(), password: 'TempPassword123!', commission: Number(commission) || 50 });
+      await onSubmit({ name: name.trim(), nickname: nickname.trim() || undefined, specialty: specialty.trim() || undefined, cpf: cpfDigits, phone: phone.trim(), email: email.trim(), password: 'TempPassword123!', commission: Number(commission) || 50 });
       resetForm(); onClose();
     } catch (err: any) {
       if (isAxiosError(err)) {
@@ -619,7 +616,7 @@ export function AddProfessionalModal({
                     disabled={submitting}
                     activeOpacity={0.75}
                   >
-                    <Text style={[styles.deleteBtnText, { fontFamily: fontSemiBold }]}>🗑 Excluir Profissional</Text>
+                    <Text style={[styles.deleteBtnText, { fontFamily: fontSemiBold }]}>Excluir Profissional</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -647,9 +644,17 @@ const styles = StyleSheet.create({
   formContent: { paddingHorizontal: 24, paddingTop: 18, gap: 16, paddingBottom: 8 },
   row: { flexDirection: 'row', gap: 12 },
   errorText: { color: Colors.error, fontSize: 13, textAlign: 'center' },
-  actions: { marginTop: 8, paddingBottom: 12, gap: 10 },
-  deleteBtn: { marginTop: 6, paddingVertical: 13, borderRadius: 12, alignItems: 'center', backgroundColor: '#DC2626' },
-  deleteBtnText: { fontSize: 14, color: '#FFFFFF' },
+  actions: { marginTop: 8, paddingBottom: 12, gap: 12 },
+  deleteBtn: {
+    height: 52,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#DC2626',
+    width: '100%',
+    marginTop: 0,
+  },
+  deleteBtnText: { fontSize: 16, color: '#FFFFFF', letterSpacing: -0.32, lineHeight: 24.8 },
 });
 
 const jStyles = StyleSheet.create({

@@ -12,6 +12,8 @@ public record ProfessionalAdminUpdateDTO(
 
         String nickname,
 
+        String specialty,
+
         @CPF(message = "CPF inválido.")
         String cpf,
 

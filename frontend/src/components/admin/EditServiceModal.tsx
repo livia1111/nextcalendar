@@ -139,7 +139,7 @@ function DurationPicker({ value, onChange, fontRegular, fontSemiBold }: Duration
 
 const dp = StyleSheet.create({
   wrapper: { gap: 6 },
-  label: { fontSize: 13, color: Colors.grey500 },
+  label: { fontSize: 13, color: Colors.dark },
   trigger: {
     height: 48, borderRadius: 10, borderWidth: 1.5, borderColor: Colors.grey200,
     backgroundColor: Colors.white, paddingHorizontal: 14, flexDirection: 'row',
@@ -327,7 +327,7 @@ export function EditServiceModal({ visible, service, onClose, onSubmit, onDelete
                 activeOpacity={0.8}
               >
                 <Text style={[styles.deleteText, { fontFamily: fontSemiBold }]}>
-                  {deleting ? 'Excluindo...' : '🗑 Excluir Serviço'}
+                  {deleting ? 'Excluindo...' : 'Excluir Serviço'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -359,13 +359,12 @@ const styles = StyleSheet.create({
   errorText: { color: Colors.error, fontSize: 13, textAlign: 'center' },
   actions: { marginTop: 8, paddingBottom: 12, gap: 12 },
   deleteBtn: {
-    // Mesmas dimensões do botão principal (Button component usa paddingVertical ~14–16)
-    backgroundColor: '#DC2626',
+    height: 52,
     borderRadius: 12,
-    paddingVertical: 15,
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#DC2626',
     width: '100%',
-    marginTop: 0, // gap: 12 já faz a separação
   },
-  deleteText: { fontSize: 15, color: '#FFFFFF' },
+  deleteText: { fontSize: 16, color: '#FFFFFF', letterSpacing: -0.32, lineHeight: 24.8 },
 });

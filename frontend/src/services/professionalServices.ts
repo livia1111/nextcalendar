@@ -11,7 +11,8 @@ export type ProfessionalMin = {
   email?: string;
   phone?: string;
   photoUrl?: string | null;
-  specialty?: string;  // campo local/visual — não existe no backend, mantido para compatibilidade de UI
+  specialty?: string;  // campo persistido na entidade JPA após migração de schema
+
   active?: boolean;
   commission?: number;
 };

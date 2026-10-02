@@ -37,4 +37,6 @@ public interface ClientRepository extends JpaRepository<ClientEntity, UUID> {
                     "(LOWER(c.user.name) LIKE LOWER(CONCAT('%', :name, '%')) OR LOWER(c.name) LIKE LOWER(CONCAT('%', :name, '%')))")
     Page<ClientEntity> findByNameContainingIgnoreCaseAndActiveTrue(@Param("name") String name, Pageable pageable);
 
+    boolean existsByPhone(String phone);
+
 }

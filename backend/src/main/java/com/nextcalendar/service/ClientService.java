@@ -32,8 +32,11 @@ public class ClientService {
     public ClientEntity createClientFromRegistration(UserEntity user, RegisterRequestDTO dto) {
 
         if (clientRepository.existsByEmail(user.getEmail())) {
-            throw new BusinessException("O e-mail " + user.getEmail() + " já está cadastrado como cliente."
-            );
+            throw new BusinessException("Email '" + user.getEmail() + "' já está cadastrado.");
+        }
+
+        if (dto.phone() != null && !dto.phone().isBlank() && clientRepository.existsByPhone(dto.phone())) {
+            throw new BusinessException("Este número de telefone já está sendo usado por outro usuário.");
         }
 
         ClientEntity client = new ClientEntity();

@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/Button';
 import { InputField } from '@/components/ui/InputField';
@@ -22,11 +22,10 @@ export default function RegisterScreen() {
   const [phone, setPhone] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [password, setPassword] = useState('');
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [globalError, setGlobalError] = useState('');
-
 
   function handleDateChange(text: string) {
     const cleaned = text.replace(/\D/g, '');
@@ -45,11 +44,16 @@ export default function RegisterScreen() {
     return `${year}-${month}-${day}`;
   }
 
-
   async function handleRegister() {
     setGlobalError('');
     setErrors({});
 
+    // Validação antecipada de telefone (10 ou 11 dígitos numéricos)
+    const phoneDigits = phone.replace(/\D/g, '');
+    if (phoneDigits.length > 0 && (phoneDigits.length < 10 || phoneDigits.length > 11)) {
+      setErrors((prev) => ({ ...prev, phone: 'Informe um telefone válido com DDD (10 ou 11 dígitos).' }));
+      return;
+    }
 
     const formattedDate = convertDateToISO(dateOfBirth);
 
@@ -63,14 +67,20 @@ export default function RegisterScreen() {
       setErrors(fieldErrors);
       return;
     }
-    
+
     try {
       setIsSubmitting(true);
-      const formattedDate = convertDateToISO(dateOfBirth);
-      await registerService(name, email, password, 'CUSTOMER',phone,formattedDate);
+      await registerService(name, email, password, 'CUSTOMER', phone, formattedDate);
       router.replace('/login');
     } catch (err: any) {
-      setGlobalError(err?.response?.data?.message || 'Erro ao criar conta. Tente novamente.');
+      // O backend retorna a mensagem de erro como string pura no body (BusinessException /
+      // DuplicateResourceException) ou como objeto { message: "..." }. Tratamos ambos os casos.
+      const apiMessage =
+        err?.response?.data?.message ||
+        (typeof err?.response?.data === 'string' ? err.response.data : null) ||
+        'Erro ao criar conta. Verifique os dados e tente novamente.';
+
+      setGlobalError(apiMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -96,16 +106,54 @@ export default function RegisterScreen() {
         </View>
 
         <View style={styles.form}>
-          <InputField label="Nome completo" value={name} onChangeText={setName} placeholder="Seu nome completo" autoCapitalize="words" error={errors.name} />
-          <InputField label="Email" value={email} onChangeText={setEmail} placeholder="seu@email.com" keyboardType="email-address" autoCapitalize="none" error={errors.email} />
-          <InputField label="Número de telefone" value={phone} onChangeText={(text) => setPhone(formatPhone(text))} placeholder="(00) 00000-0000" keyboardType="phone-pad" error={errors.phone} />
-          <InputField label="Data de nascimento" value={dateOfBirth} onChangeText={handleDateChange} placeholder="DD/MM/AAAA" keyboardType="numeric"  maxLength={10}error={errors.dateOfBirth} />
-          <InputField label="Senha" value={password} onChangeText={setPassword} placeholder="••••••••••••" secureTextEntry error={errors.password} />
+          <InputField
+            label="Nome completo *"
+            value={name}
+            onChangeText={setName}
+            placeholder="Seu nome completo"
+            autoCapitalize="words"
+            error={errors.name}
+          />
+          <InputField
+            label="Email *"
+            value={email}
+            onChangeText={setEmail}
+            placeholder="seu@email.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            error={errors.email}
+          />
+          <InputField
+            label="Número de telefone *"
+            value={phone}
+            onChangeText={(text) => setPhone(formatPhone(text))}
+            placeholder="(00) 00000-0000"
+            keyboardType="phone-pad"
+            maxLength={15}
+            error={errors.phone}
+          />
+          <InputField
+            label="Data de nascimento *"
+            value={dateOfBirth}
+            onChangeText={handleDateChange}
+            placeholder="DD/MM/AAAA"
+            keyboardType="numeric"
+            maxLength={10}
+            error={errors.dateOfBirth}
+          />
+          <InputField
+            label="Senha *"
+            value={password}
+            onChangeText={setPassword}
+            placeholder="••••••••••••"
+            secureTextEntry
+            error={errors.password}
+          />
         </View>
 
         {globalError ? <Text style={styles.errorText}>{globalError}</Text> : null}
 
-        <Button label={isSubmitting ? "Criando..." : "Criar conta"} onPress={handleRegister} disabled={isSubmitting} />
+        <Button label={isSubmitting ? 'Criando...' : 'Criar conta'} onPress={handleRegister} disabled={isSubmitting} />
 
         <View style={styles.loginRow}>
           <Text style={[styles.loginText, { fontFamily: fontRegular }]}>Já tem uma conta? </Text>
@@ -130,5 +178,5 @@ const styles = StyleSheet.create({
   loginRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   loginText: { color: Colors.grey400, fontSize: 14, lineHeight: 21.7, letterSpacing: -0.28 },
   loginLink: { color: Colors.gold, fontSize: 14, lineHeight: 21.7, letterSpacing: -0.28, fontWeight: '600' },
-  errorText: { color: Colors.error, fontSize: 14, textAlign: 'center', marginTop: 8,fontWeight:'bold' },
+  errorText: { color: Colors.error, fontSize: 14, textAlign: 'center', marginTop: 8, fontWeight: 'bold' },
 });

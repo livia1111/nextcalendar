@@ -95,6 +95,7 @@ const loadHomeData = useCallback(async () => {
   // 1. Agendamentos reais do cliente
   if (user?.id) {
     try {
+      // getClientByUserId retorna null quando o usuário não tem perfil de cliente
       const client = await getClientByUserId(user.id);
 
       if (client?.id) {
@@ -130,11 +131,18 @@ const loadHomeData = useCallback(async () => {
           appointments.filter((a) => a.status === 'COMPLETED').length
         );
       } else {
+        // null = usuário autenticado sem perfil de cliente (ex: gestor)
         setUpcomingBookings([]);
         setCompletedBookingsCount(0);
       }
-    } catch (error) {
-      console.error('[HOME] Erro ao carregar agendamentos:', error);
+    } catch (error: any) {
+      // Loga detalhes úteis para diagnóstico: status HTTP e URL da requisição
+      const status = error?.response?.status;
+      const url = error?.config?.url ?? '(url desconhecida)';
+      console.error(
+        `[HOME] Erro ao carregar agendamentos — status ${status ?? 'Network Error'} em ${url}`,
+        error?.message
+      );
 
       setUpcomingBookings([]);
       setCompletedBookingsCount(0);
@@ -149,8 +157,13 @@ const loadHomeData = useCallback(async () => {
     try {
       const page = await getServices(currentTenantId);
       setServices(page?.content ?? []);
-    } catch (error) {
-      console.error('[HOME] Erro ao carregar serviços:', error);
+    } catch (error: any) {
+      const status = error?.response?.status;
+      const url = error?.config?.url ?? '(url desconhecida)';
+      console.error(
+        `[HOME] Erro ao carregar serviços — status ${status ?? 'Network Error'} em ${url}`,
+        error?.message
+      );
       setServices([]);
     }
   }

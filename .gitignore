@@ -15,16 +15,48 @@ backend/.sts4-cache
 backend/*.iml
 backend/*.ipr
 backend/*.iws
+backend/data/
+*.mv.db
+*.trace.db
 
-# Frontend
+# Frontend (Expo / React Native)
 frontend/node_modules/
+node_modules/
 frontend/.next/
 frontend/dist/
+dist/
 frontend/build/
+web-build/
 frontend/coverage/
 frontend/.turbo/
+.expo/
+expo-env.d.ts
+frontend/android/
+frontend/ios/
+/android
+/ios
+
+# Environment variables
 frontend/.env
 frontend/.env.*
+!frontend/.env.example
+.env
+.env.*
+.env*.local
+
+# Native keystores & certificates
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
+
+# Metro & TypeScript
+.metro-health-check*
+*.tsbuildinfo
 
 # IDEs e editores
 .vscode/
@@ -39,8 +71,10 @@ Thumbs.db
 
 # Logs
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-backend/data/
-backend/data/
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# Docs
+*.GUIA_DESENVOLVIMENTO.md
+*.README.md

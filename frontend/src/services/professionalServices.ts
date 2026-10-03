@@ -6,8 +6,9 @@ export type ProfessionalMin = {
   id: string;
   name: string;
   nickname?: string;
-  phone?: string;
+  cpf?: string;
   email?: string;
+  phone?: string;
   photoUrl?: string | null;
   specialty?: string;
   active?: boolean;
@@ -20,6 +21,7 @@ export type ProfessionalCreateInput = {
   cpf: string;
   email: string;
   phone: string;
+  password?: string;
   gender?: string;
   photoUrl?: string;
   specialty?: string;
@@ -28,7 +30,7 @@ export type ProfessionalCreateInput = {
 
 /** Resposta de criação — inclui temporaryPassword (só neste endpoint). */
 export type ProfessionalCreateResponse = ProfessionalMin & {
-  temporaryPassword: string;
+  temporaryPassword?: string;
 };
 
 export type PageResponse<T> = {
@@ -52,7 +54,6 @@ export async function getActiveProfessionals(
   );
   return data;
 }
-
 
 // ─── POST /api/v1/establishments/{establishmentId}/professionals ───────────────
 
@@ -112,7 +113,7 @@ export async function searchProfessionals(
 // Atualizar próprio perfil
 
 export type ProfessionalUpdateInput = Partial<
-  Omit<ProfessionalCreateInput, 'cpf'>
+  Omit<ProfessionalCreateInput, 'cpf' | 'password'>
 >;
 
 export async function updateProfessional(
@@ -180,4 +181,4 @@ export async function getProfessionalMe(): Promise<ProfessionalMe> {
 export async function getProfessionalByUserId(userId: string): Promise<ProfessionalMe> {
   const { data } = await api.get<ProfessionalMe>(`/professionals/by-user/${userId}`);
   return data;
-}
+}

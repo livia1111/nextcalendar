@@ -34,6 +34,11 @@ public class ProfessionalMeController {
         return professionalService.findByUserId(userId);
     }
 
+    @GetMapping("/me/{userId}")
+    public ProfessionalMeResponseDTO getMyProfile(@PathVariable UUID userId) {
+        return professionalService.findByUserId(userId);
+    }
+
     @GetMapping("/me/appointments")
     public List<AppointmentResponseDTO> getMyAppointments(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,

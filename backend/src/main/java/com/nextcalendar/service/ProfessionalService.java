@@ -82,6 +82,11 @@ public class ProfessionalService {
         return new ProfessionalMeResponseDTO(professional);
     }
 
+    @Transactional(readOnly = true)
+    public ProfessionalMeResponseDTO getMyProfile(UUID userId) {
+        return findByUserId(userId);
+    }
+
     @Transactional
     public ProfessionalProfileResponseDTO createProfessional(UUID establishmentId, ProfessionalCreateDTO dto) {
         com.nextcalendar.config.SecurityUtils.getAuthenticatedUser().ifPresent(u -> {

@@ -33,3 +33,8 @@ build/
 .vscode/
 application.properties
 !src/test/resources/application.properties
+
+### H2 file database (gerado em modo FILE — não versionar) ###
+data/
+*.mv.db
+*.trace.db

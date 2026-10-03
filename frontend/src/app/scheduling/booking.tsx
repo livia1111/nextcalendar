@@ -11,6 +11,7 @@ import { useAppFonts } from '@/hooks/use-fonts';
 import { useAuth } from '@/context/AuthContext';
 import { createAppointment } from '@/services/appointmentServices';
 import { getClientByUserId, type ClientDetails } from '@/services/clientServices';
+import { isPastIso } from '@/utils/dateValidation';
 
 type BookingParams = {
   establishmentId?: string | string[];
@@ -89,6 +90,12 @@ export default function BookingScreen() {
     }
     if (!client?.id) {
       setError('Não foi possível identificar seu cadastro de cliente. Tente novamente.');
+      return;
+    }
+
+    // Garante que o horário selecionado ainda não passou (defesa em camada de confirmação)
+    if (isPastIso(startDateTime)) {
+      setError('O horário selecionado já passou. Volte e escolha uma data e horário futuros.');
       return;
     }
 

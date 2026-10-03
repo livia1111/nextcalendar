@@ -20,6 +20,8 @@ import { useEstablishment } from '@/hooks/useEstablishment';
 import { useProfessional } from '@/hooks/useProfessionals';
 import {
   createProfessional,
+  deactivateProfessional,
+  getProfessionalById,
   updateProfessionalAsAdmin,
   type ProfessionalAdminUpdateInput,
   type ProfessionalCreateInput,
@@ -35,7 +37,9 @@ export default function EquipeScreen() {
 
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedProfessional, setSelectedProfessional] = useState<ProfessionalMin | undefined>(undefined);
+  const [loadingDetail, setLoadingDetail] = useState(false);
 
   const {
     professionals,
@@ -55,13 +59,27 @@ export default function EquipeScreen() {
   // Abertura do Modal para Cadastro (Botão "+ Adicionar")
   function handleOpenCreate() {
     setSelectedProfessional(undefined);
+    setModalMode('create');
     setModalVisible(true);
   }
 
-  // Clique no card do profissional → navega para a tela de detalhe
-  function handleSelectProfessional(profId: string | null) {
-    if (!profId) return;
-    router.push(`/(gestor)/profissional/${profId}` as any);
+  // Abertura do Modal para Edição (Clique no card do profissional)
+  // Busca o objeto completo (ProfessionalDetailsResponseDTO) com nickname, email e commission.
+  // O endpoint de listagem retorna apenas ProfessionalMinResponseDTO (id, name, phone, photoUrl, commission)
+  // e NÃO inclui nickname nem email — por isso a busca por ID é obrigatória antes de abrir o modal.
+  async function handleSelectProfessional(profId: string | null) {
+    if (!profId || !establishmentId) return;
+    setLoadingDetail(true);
+    try {
+      const fullProfessional = await getProfessionalById(establishmentId, profId);
+      setSelectedProfessional(fullProfessional);
+      setModalMode('edit');
+      setModalVisible(true);
+    } catch {
+      Alert.alert('Erro', 'Não foi possível carregar os dados do profissional.');
+    } finally {
+      setLoadingDetail(false);
+    }
   }
 
   // Submissão de novo profissional — retorna a resposta para o modal exibir a senha temporária
@@ -100,6 +118,28 @@ export default function EquipeScreen() {
     }
   }
 
+  // Exclusão do profissional
+  async function handleDeleteProfessional(id: string) {
+    if (!establishmentId) {
+      Alert.alert('Erro', 'Estabelecimento não encontrado.');
+      return;
+    }
+    try {
+      await deactivateProfessional(establishmentId, id);
+      // Remove da listagem local sem precisar de novo fetch
+      setMode('all');
+      setTimeout(() => setMode('active'), 100);
+      setSelectedProfessional(undefined);
+      setModalVisible(false);
+      Alert.alert('Sucesso', 'Profissional excluído com sucesso!');
+    } catch (err: any) {
+      const backendMessage =
+        (err as any)?.response?.data?.message ||
+        (typeof (err as any)?.response?.data === 'string' ? (err as any)?.response?.data : null);
+      throw new Error(backendMessage || 'Não foi possível excluir o profissional.');
+    }
+  }
+
   if (loadingEstablishment) {
     return (
       <View style={styles.loadingContainer}>
@@ -132,19 +172,20 @@ export default function EquipeScreen() {
           selectedId={selectedProfessional?.id ?? null}
           onSelect={handleSelectProfessional}
           onAddPress={handleOpenCreate}
-          isLoading={loadingProfessionals}
+          isLoading={loadingProfessionals || loadingDetail}
           hasError={!!errorProfessionals}
         />
       </ScrollView>
 
       <AddProfessionalModal
         visible={modalVisible}
-        mode="create"
+        mode={modalMode}
         professional={selectedProfessional}
         establishmentId={establishmentId}
         onClose={() => setModalVisible(false)}
         onSubmit={handleCreateProfessional}
         onUpdate={handleUpdateProfessional}
+        onDelete={handleDeleteProfessional}
       />
     </View>
   );

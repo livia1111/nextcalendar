@@ -16,6 +16,7 @@ public class ProfessionalMapper {
         professional.setEstablishment(establishment);
         professional.setName(dto.name());
         professional.setNickname(dto.nickname());
+        professional.setSpecialty(dto.specialty());
         professional.setCpf(dto.cpf());
         professional.setEmail(dto.email());
         // A senha NÃO é definida aqui — é gerada pelo ProfessionalService e
@@ -36,6 +37,9 @@ public class ProfessionalMapper {
         }
         if (dto.nickname() != null) {
             professional.setNickname(dto.nickname());
+        }
+        if (dto.specialty() != null) {
+            professional.setSpecialty(dto.specialty());
         }
         if (dto.cpf() != null && !dto.cpf().isBlank()) {
             professional.setCpf(dto.cpf());

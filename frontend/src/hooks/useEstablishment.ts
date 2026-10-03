@@ -15,13 +15,20 @@ export function useEstablishment() {
   const [loading, setLoading] = useState(true);
 
   const loadEstablishment = useCallback(async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      setEstablishmentId('');
+      setEstablishmentName('Minha Barbearia');
+      setLoading(false);
+      return;
+    }
     try {
       const est = await getEstablishmentByOwner(user.id);
       setEstablishmentId(est.id);
       setEstablishmentName(est.name || 'Minha Barbearia');
-    } catch {
-      // mantém fallback; telas que dependem de establishmentId simplesmente não farão chamadas
+    } catch (error) {
+      console.error('[ESTABLISHMENT] Erro ao carregar estabelecimento:', error);
+      setEstablishmentId('');
+      setEstablishmentName('Minha Barbearia');
     } finally {
       setLoading(false);
     }

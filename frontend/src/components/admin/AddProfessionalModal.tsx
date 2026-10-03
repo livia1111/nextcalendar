@@ -53,6 +53,21 @@ function formatCpf(val: string): string {
   const d = val.replace(/\D/g, '').slice(0, 11);
   return d.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
 }
+
+/** Valida os dígitos verificadores de um CPF brasileiro. */
+function isValidCpf(val: string): boolean {
+  const d = val.replace(/\D/g, '');
+  if (d.length !== 11) return false;
+  // Rejeita sequências triviais (ex: 111.111.111-11)
+  if (/^(\d)\1{10}$/.test(d)) return false;
+  const calcDigit = (base: string, len: number): number => {
+    let sum = 0;
+    for (let i = 0; i < len; i++) sum += parseInt(base[i]) * (len + 1 - i);
+    const rem = (sum * 10) % 11;
+    return rem === 10 ? 0 : rem;
+  };
+  return calcDigit(d, 9) === parseInt(d[9]) && calcDigit(d, 10) === parseInt(d[10]);
+}
 function maskTime(raw: string): string {
   const d = raw.replace(/\D/g, '').slice(0, 4);
   if (d.length <= 2) return d;
@@ -78,82 +93,179 @@ function whErrMsg(err: unknown): string {
   return 'Nao foi possivel salvar. Tente novamente.';
 }
 
-// JornadaForm sub-component
+// ─── JornadaForm — formulário de criação em lote ou edição individual ─────────
+
 interface JornadaFormProps {
+  /** Presente apenas no modo edição individual (clique em ✏️). */
   initial?: WorkingHours;
+  /** Dias já cadastrados — fica desabilitado na seleção múltipla de novos dias. */
   disabledDays?: DayOfWeek[];
-  onSave: (input: WorkingHoursInput) => Promise<void>;
+  onSave: (inputs: WorkingHoursInput[]) => Promise<void>;
   onCancel: () => void;
   fontRegular: string;
   fontSemiBold: string;
 }
+
 function JornadaForm({ initial, disabledDays = [], onSave, onCancel, fontRegular, fontSemiBold }: JornadaFormProps) {
   const isEditing = !!initial;
-  const [day, setDay] = useState<DayOfWeek>(initial?.dayOfWeek ?? 'MONDAY');
+
+  // No modo edição individual os chips ficam fixos (apenas 1 dia selecionado)
+  const [selectedDays, setSelectedDays] = useState<DayOfWeek[]>(
+    isEditing ? [initial!.dayOfWeek] : []
+  );
   const [startTime, setStartTime] = useState(toHHmm(initial?.startTime));
   const [endTime, setEndTime] = useState(toHHmm(initial?.endTime));
   const [breakStart, setBreakStart] = useState(toHHmm(initial?.breakStart));
   const [breakEnd, setBreakEnd] = useState(toHHmm(initial?.breakEnd));
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+
+  /** Alterna seleção de um dia (apenas no modo criação). */
+  function toggleDay(d: DayOfWeek) {
+    if (disabledDays.includes(d)) return;
+    setSelectedDays((prev) =>
+      prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]
+    );
+  }
+
+  /** Atalhos de seleção rápida. */
+  function selectPreset(preset: 'weekdays' | 'weekdaysSat' | 'all' | 'none') {
+    const available = (days: DayOfWeek[]) => days.filter((d) => !disabledDays.includes(d));
+    if (preset === 'weekdays') setSelectedDays(available(['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']));
+    if (preset === 'weekdaysSat') setSelectedDays(available(['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY']));
+    if (preset === 'all') setSelectedDays(available(DAYS_ORDER));
+    if (preset === 'none') setSelectedDays([]);
+  }
+
+  /** Atalho de horário comercial padrão. */
+  function applyDefaultSchedule() {
+    setStartTime('08:00');
+    setEndTime('18:00');
+    setBreakStart('12:00');
+    setBreakEnd('13:00');
+  }
+
   async function handleSave() {
+    if (isEditing && selectedDays.length === 0) { setFormError('Nenhum dia selecionado.'); return; }
+    if (!isEditing && selectedDays.length === 0) { setFormError('Selecione ao menos um dia da semana.'); return; }
     if (!startTime || !endTime) { setFormError('Informe horario de inicio e termino.'); return; }
     if (breakStart && !breakEnd) { setFormError('Informe tambem o termino da pausa.'); return; }
+    if (!breakStart && breakEnd) { setFormError('Informe tambem o inicio da pausa.'); return; }
     setFormError(''); setSaving(true);
     try {
-      await onSave({ dayOfWeek: day, startTime: toHHmmss(startTime), endTime: toHHmmss(endTime), breakStart: breakStart ? toHHmmss(breakStart) : null, breakEnd: breakEnd ? toHHmmss(breakEnd) : null });
+      const inputs: WorkingHoursInput[] = selectedDays.map((d) => ({
+        dayOfWeek: d,
+        startTime: toHHmmss(startTime),
+        endTime: toHHmmss(endTime),
+        breakStart: breakStart ? toHHmmss(breakStart) : null,
+        breakEnd: breakEnd ? toHHmmss(breakEnd) : null,
+      }));
+      await onSave(inputs);
     } catch (err) { setFormError(whErrMsg(err)); } finally { setSaving(false); }
   }
+
   return (
     <View style={jStyles.formCard}>
+
+      {/* Seleção de dias */}
       {!isEditing && (
         <>
-          <Text style={[jStyles.formLabel, { fontFamily: fontSemiBold }]}>Dia da semana</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={jStyles.dayScroll}>
+          <Text style={[jStyles.formLabel, { fontFamily: fontSemiBold }]}>Dias da semana</Text>
+
+          {/* Chips de seleção múltipla */}
+          <View style={jStyles.dayChipsRow}>
             {DAYS_ORDER.map((d) => {
               const disabled = disabledDays.includes(d);
+              const selected = selectedDays.includes(d);
               return (
-                <TouchableOpacity key={d} disabled={disabled} style={[jStyles.dayChip, day === d && jStyles.dayChipSelected, disabled && jStyles.dayChipDisabled]} onPress={() => setDay(d)}>
-                  <Text style={[jStyles.dayChipText, { fontFamily: fontRegular }, day === d && jStyles.dayChipTextSelected, disabled && jStyles.dayChipTextDisabled]}>{DAY_SHORT[d]}</Text>
+                <TouchableOpacity
+                  key={d}
+                  disabled={disabled}
+                  style={[jStyles.dayChip, selected && jStyles.dayChipSelected, disabled && jStyles.dayChipDisabled]}
+                  onPress={() => toggleDay(d)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[jStyles.dayChipText, { fontFamily: fontRegular }, selected && jStyles.dayChipTextSelected, disabled && jStyles.dayChipTextDisabled]}>
+                    {DAY_SHORT[d]}
+                  </Text>
                 </TouchableOpacity>
               );
             })}
-          </ScrollView>
+          </View>
+
+          {/* Atalhos de seleção rápida */}
+          <View style={jStyles.presetRow}>
+            <TouchableOpacity style={jStyles.presetBtn} onPress={() => selectPreset('weekdays')} activeOpacity={0.7}>
+              <Text style={[jStyles.presetBtnText, { fontFamily: fontRegular }]}>Seg–Sex</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={jStyles.presetBtn} onPress={() => selectPreset('weekdaysSat')} activeOpacity={0.7}>
+              <Text style={[jStyles.presetBtnText, { fontFamily: fontRegular }]}>Seg–Sáb</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={jStyles.presetBtn} onPress={() => selectPreset('all')} activeOpacity={0.7}>
+              <Text style={[jStyles.presetBtnText, { fontFamily: fontRegular }]}>Todos</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[jStyles.presetBtn, jStyles.presetBtnMuted]} onPress={() => selectPreset('none')} activeOpacity={0.7}>
+              <Text style={[jStyles.presetBtnText, { fontFamily: fontRegular, color: Colors.grey500 }]}>Limpar</Text>
+            </TouchableOpacity>
+          </View>
         </>
       )}
+
+      {/* Atalho de horário padrão */}
+      {!isEditing && (
+        <TouchableOpacity style={jStyles.defaultScheduleBtn} onPress={applyDefaultSchedule} activeOpacity={0.8}>
+          <Text style={[jStyles.defaultScheduleBtnText, { fontFamily: fontSemiBold }]}>⏰ Horário comercial  08:00–18:00</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Horário de início e término */}
       <View style={jStyles.timeRow}>
         <View style={{ flex: 1 }}>
           <Text style={[jStyles.formLabel, { fontFamily: fontSemiBold }]}>Inicio</Text>
           <TextInput style={[jStyles.timeInput, { fontFamily: fontRegular }]} placeholder="09:00" placeholderTextColor={Colors.grey400} value={startTime} onChangeText={(t) => setStartTime(maskTime(t))} keyboardType="number-pad" maxLength={5} />
         </View>
-        <View style={jStyles.timeSep}><Text style={{ color: Colors.grey400, fontSize: 18 }}>-</Text></View>
+        <View style={jStyles.timeSep}><Text style={{ color: Colors.grey400, fontSize: 18 }}>–</Text></View>
         <View style={{ flex: 1 }}>
           <Text style={[jStyles.formLabel, { fontFamily: fontSemiBold }]}>Termino</Text>
           <TextInput style={[jStyles.timeInput, { fontFamily: fontRegular }]} placeholder="18:00" placeholderTextColor={Colors.grey400} value={endTime} onChangeText={(t) => setEndTime(maskTime(t))} keyboardType="number-pad" maxLength={5} />
         </View>
       </View>
-      <Text style={[jStyles.formLabel, { fontFamily: fontSemiBold }]}>Pausa <Text style={{ fontFamily: fontRegular, color: Colors.grey400 }}>(opcional)</Text></Text>
+
+      {/* Pausa */}
+      <Text style={[jStyles.formLabel, { fontFamily: fontSemiBold }]}>
+        Pausa <Text style={{ fontFamily: fontRegular, color: Colors.grey400 }}>(opcional)</Text>
+      </Text>
       <View style={jStyles.timeRow}>
         <View style={{ flex: 1 }}>
           <TextInput style={[jStyles.timeInput, { fontFamily: fontRegular }]} placeholder="12:00" placeholderTextColor={Colors.grey400} value={breakStart} onChangeText={(t) => setBreakStart(maskTime(t))} keyboardType="number-pad" maxLength={5} />
         </View>
-        <View style={jStyles.timeSep}><Text style={{ color: Colors.grey400, fontSize: 18 }}>-</Text></View>
+        <View style={jStyles.timeSep}><Text style={{ color: Colors.grey400, fontSize: 18 }}>–</Text></View>
         <View style={{ flex: 1 }}>
           <TextInput style={[jStyles.timeInput, { fontFamily: fontRegular }]} placeholder="13:00" placeholderTextColor={Colors.grey400} value={breakEnd} onChangeText={(t) => setBreakEnd(maskTime(t))} keyboardType="number-pad" maxLength={5} />
         </View>
       </View>
+
       {formError ? <Text style={[jStyles.formError, { fontFamily: fontRegular }]}>{formError}</Text> : null}
+
       <View style={jStyles.formActions}>
-        <TouchableOpacity style={jStyles.cancelBtn} onPress={onCancel} activeOpacity={0.7}><Text style={[jStyles.cancelBtnText, { fontFamily: fontRegular }]}>Cancelar</Text></TouchableOpacity>
+        <TouchableOpacity style={jStyles.cancelBtn} onPress={onCancel} activeOpacity={0.7}>
+          <Text style={[jStyles.cancelBtnText, { fontFamily: fontRegular }]}>Cancelar</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={[jStyles.saveBtn, saving && { opacity: 0.6 }]} onPress={handleSave} disabled={saving} activeOpacity={0.8}>
-          {saving ? <ActivityIndicator color={Colors.white} size="small" /> : <Text style={[jStyles.saveBtnText, { fontFamily: fontSemiBold }]}>Salvar</Text>}
+          {saving
+            ? <ActivityIndicator color={Colors.white} size="small" />
+            : <Text style={[jStyles.saveBtnText, { fontFamily: fontSemiBold }]}>
+              {isEditing ? 'Salvar' : `Salvar${selectedDays.length > 1 ? ` (${selectedDays.length} dias)` : ''}`}
+            </Text>
+          }
         </TouchableOpacity>
       </View>
     </View>
   );
 }
 
-// JornadaTab sub-component
+// ─── JornadaTab ───────────────────────────────────────────────────────────────
+
 interface JornadaTabProps { establishmentId: string; professionalId: string; fontRegular: string; fontSemiBold: string; }
 function JornadaTab({ establishmentId, professionalId, fontRegular, fontSemiBold }: JornadaTabProps) {
   const [hours, setHours] = useState<WorkingHours[]>([]);
@@ -161,6 +273,7 @@ function JornadaTab({ establishmentId, professionalId, fontRegular, fontSemiBold
   const [loadError, setLoadError] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [addingNew, setAddingNew] = useState(false);
+
   async function load() {
     setLoading(true); setLoadError('');
     try { const data = await listWorkingHours(establishmentId, professionalId); setHours(data); }
@@ -168,16 +281,71 @@ function JornadaTab({ establishmentId, professionalId, fontRegular, fontSemiBold
     finally { setLoading(false); }
   }
   useEffect(() => { load(); }, []);
-  async function handleCreate(input: WorkingHoursInput) { await createWorkingHours(establishmentId, professionalId, input); setAddingNew(false); await load(); }
-  async function handleUpdate(id: string, input: WorkingHoursInput) { await updateWorkingHours(establishmentId, professionalId, id, input); setEditingId(null); await load(); }
-  function handleDelete(wh: WorkingHours) {
-    Alert.alert('Remover jornada', 'Tem certeza que deseja remover a jornada de ' + DAY_LABEL[wh.dayOfWeek] + '?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Remover', style: 'destructive', onPress: async () => { try { await deleteWorkingHours(establishmentId, professionalId, wh.id); await load(); } catch { Alert.alert('Erro', 'Nao foi possivel remover a jornada.'); } } },
-    ]);
+
+  /**
+   * Cria ou atualiza múltiplos dias de uma só vez.
+   * Para cada dia selecionado: atualiza se já existir, cria se não existir.
+   */
+  async function handleBatchSave(inputs: WorkingHoursInput[]) {
+    for (const input of inputs) {
+      const existing = hours.find((h) => h.dayOfWeek === input.dayOfWeek);
+      if (existing) {
+        await updateWorkingHours(establishmentId, professionalId, existing.id, input);
+      } else {
+        await createWorkingHours(establishmentId, professionalId, input);
+      }
+    }
+    setAddingNew(false);
+    await load();
   }
+
+  async function handleUpdate(id: string, inputs: WorkingHoursInput[]) {
+    // Na edição individual sempre chega array de 1 item
+    await updateWorkingHours(establishmentId, professionalId, id, inputs[0]);
+    setEditingId(null);
+    await load();
+  }
+
+  async function doDelete(wh: WorkingHours) {
+    try {
+      await deleteWorkingHours(establishmentId, professionalId, wh.id);
+      await load();
+    } catch {
+      Alert.alert('Erro', 'Nao foi possivel remover a jornada.');
+    }
+  }
+
+  function handleDelete(wh: WorkingHours) {
+    // Alert.alert com múltiplos botões não funciona de forma confiável na web
+    // (react-native-web não implementa os callbacks de botão). Por isso,
+    // usamos window.confirm() nativo do navegador quando rodando na web.
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(
+        `Remover jornada de ${DAY_LABEL[wh.dayOfWeek]}? Esta ação não pode ser desfeita.`
+      );
+      if (confirmed) {
+        doDelete(wh);
+      }
+      return;
+    }
+
+    Alert.alert(
+      'Remover jornada',
+      'Tem certeza que deseja remover a jornada de ' + DAY_LABEL[wh.dayOfWeek] + '?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Remover',
+          style: 'destructive',
+          onPress: () => doDelete(wh),
+        },
+      ]
+    );
+  }
+
   const registeredDays = hours.map((h) => h.dayOfWeek);
   const sortedHours = [...hours].sort((a, b) => DAYS_ORDER.indexOf(a.dayOfWeek) - DAYS_ORDER.indexOf(b.dayOfWeek));
+
   if (loading) return <View style={jStyles.centered}><ActivityIndicator color={Colors.gold} /></View>;
   if (loadError) return (
     <View style={jStyles.centered}>
@@ -185,6 +353,7 @@ function JornadaTab({ establishmentId, professionalId, fontRegular, fontSemiBold
       <TouchableOpacity onPress={load} style={jStyles.retryBtn}><Text style={[{ color: Colors.gold, fontSize: 13 }, { fontFamily: fontSemiBold }]}>Tentar novamente</Text></TouchableOpacity>
     </View>
   );
+
   return (
     <View style={jStyles.container}>
       {sortedHours.length === 0 && !addingNew ? (
@@ -193,12 +362,21 @@ function JornadaTab({ establishmentId, professionalId, fontRegular, fontSemiBold
         sortedHours.map((wh) => (
           <View key={wh.id}>
             {editingId === wh.id ? (
-              <JornadaForm initial={wh} onSave={(input) => handleUpdate(wh.id, input)} onCancel={() => setEditingId(null)} fontRegular={fontRegular} fontSemiBold={fontSemiBold} />
+              <JornadaForm
+                initial={wh}
+                onSave={(inputs) => handleUpdate(wh.id, inputs)}
+                onCancel={() => setEditingId(null)}
+                fontRegular={fontRegular}
+                fontSemiBold={fontSemiBold}
+              />
             ) : (
               <View style={jStyles.whRow}>
                 <View style={jStyles.whInfo}>
                   <Text style={[jStyles.whDay, { fontFamily: fontSemiBold }]}>{DAY_LABEL[wh.dayOfWeek]}</Text>
-                  <Text style={[jStyles.whTime, { fontFamily: fontRegular }]}>{toHHmm(wh.startTime)} - {toHHmm(wh.endTime)}{wh.breakStart && wh.breakEnd ? '  pausa ' + toHHmm(wh.breakStart) + '-' + toHHmm(wh.breakEnd) : ''}</Text>
+                  <Text style={[jStyles.whTime, { fontFamily: fontRegular }]}>
+                    {toHHmm(wh.startTime)} – {toHHmm(wh.endTime)}
+                    {wh.breakStart && wh.breakEnd ? '  ·  pausa ' + toHHmm(wh.breakStart) + '–' + toHHmm(wh.breakEnd) : ''}
+                  </Text>
                 </View>
                 <View style={jStyles.whActions}>
                   <TouchableOpacity onPress={() => { setAddingNew(false); setEditingId(wh.id); }} style={jStyles.iconBtn} activeOpacity={0.7}><Text style={jStyles.iconBtnText}>✏️</Text></TouchableOpacity>
@@ -210,7 +388,13 @@ function JornadaTab({ establishmentId, professionalId, fontRegular, fontSemiBold
         ))
       )}
       {addingNew ? (
-        <JornadaForm disabledDays={registeredDays} onSave={handleCreate} onCancel={() => setAddingNew(false)} fontRegular={fontRegular} fontSemiBold={fontSemiBold} />
+        <JornadaForm
+          disabledDays={registeredDays}
+          onSave={handleBatchSave}
+          onCancel={() => setAddingNew(false)}
+          fontRegular={fontRegular}
+          fontSemiBold={fontSemiBold}
+        />
       ) : (
         registeredDays.length < 7 && (
           <TouchableOpacity style={jStyles.addBtn} onPress={() => { setEditingId(null); setAddingNew(true); }} activeOpacity={0.8}>
@@ -231,10 +415,11 @@ interface AddProfessionalModalProps {
   professional?: ProfessionalMin;
   establishmentId?: string;
   onUpdate?: (data: ProfessionalAdminUpdateInput) => Promise<void>;
+  onDelete?: (id: string) => Promise<void>;
 }
 
 export function AddProfessionalModal({
-  visible, onClose, onSubmit, mode = 'create', professional, establishmentId, onUpdate,
+  visible, onClose, onSubmit, mode = 'create', professional, establishmentId, onUpdate, onDelete,
 }: AddProfessionalModalProps) {
   const { fontSemiBold, fontRegular } = useAppFonts();
   const isEdit = mode === 'edit';
@@ -257,9 +442,12 @@ export function AddProfessionalModal({
   useEffect(() => {
     if (visible && !prevVisible.current) {
       if (isEdit && professional) {
-        setName(professional.name ?? ''); setNickname(professional.nickname ?? '');
-        setSpecialty(professional.specialty ?? ''); setPhone(professional.phone ?? '');
-        setEmail(professional.email ?? ''); setCommission(String(professional.commission ?? 50));
+        setName(professional.name ?? '');
+        setNickname(professional.nickname ?? '');
+        setSpecialty(professional.specialty ?? '');
+        setPhone(formatPhone(professional.phone ?? ''));
+        setEmail(professional.email ?? '');
+        setCommission(String(professional.commission ?? 50));
       } else { resetForm(); }
       setActiveTab('dados');
     }
@@ -269,9 +457,18 @@ export function AddProfessionalModal({
   function resetForm() { setName(''); setNickname(''); setSpecialty(''); setCpf(''); setPhone(''); setEmail(''); setCommission('50'); setError(''); }
 
   async function handleCreate() {
-    if (!name.trim()) { setError('O nome do profissional e obrigatorio.'); return; }
-    if (!email.trim() || !email.includes('@')) { setError('Informe um e-mail valido.'); return; }
-    if (!phone.trim()) { setError('Informe um telefone de contato.'); return; }
+    // Validação: nome completo (mínimo nome + sobrenome)
+    if (!name.trim()) { setError('O nome do profissional é obrigatório.'); return; }
+    if (name.trim().split(/\s+/).length < 2) { setError('Por favor, informe o nome completo (nome e sobrenome).'); return; }
+    if (!email.trim() || !email.includes('@')) { setError('Informe um e-mail válido.'); return; }
+    // Validação de telefone (padrão BR: 10 ou 11 dígitos)
+    const phoneDigits = phone.replace(/\D/g, '');
+    if (!phoneDigits) { setError('O telefone é obrigatório.'); return; }
+    if (phoneDigits.length < 10 || phoneDigits.length > 11) { setError('Telefone incompleto. Digite o número completo com DDD (10 ou 11 dígitos).'); return; }
+    // Validação de CPF
+    const cpfDigits = cpf.replace(/\D/g, '');
+    if (!cpfDigits || cpfDigits.length < 11) { setError('O CPF é obrigatório.'); return; }
+    if (!isValidCpf(cpfDigits)) { setError('CPF inválido. Verifique os dígitos informados.'); return; }
     setError(''); setSubmitting(true);
     try {
       if (!onSubmit) return;
@@ -279,32 +476,114 @@ export function AddProfessionalModal({
       const result = await onSubmit({
         name: name.trim(),
         nickname: nickname.trim() || undefined,
-        specialty: specialty.trim() || 'Profissional',
-        cpf: cpf.replace(/\D/g, '') || '000.000.000-00',
+        specialty: specialty.trim() || undefined,
+        cpf: cpfDigits,
         phone: phone.trim(),
         email: email.trim(),
         commission: Number(commission) || 50,
       });
       resetForm();
-      // Exibe a senha temporária — não chamamos onClose aqui para o modal de senha aparecer
+      // Exibe a senha temporária — não chamamos onClose aqui para o modal de credenciais aparecer
       if (result && 'temporaryPassword' in result && result.temporaryPassword) {
         setTempPassword(result.temporaryPassword);
         setCopied(false);
       } else {
         onClose();
       }
-    } catch (err: any) { setError(err?.message || 'Nao foi possivel cadastrar o profissional.'); }
+    } catch (err: any) {
+      if (isAxiosError(err)) {
+        const status = err.response?.status;
+        const backendMessage =
+          err.response?.data?.message ||
+          (typeof err.response?.data === 'string' ? err.response?.data : null);
+        if (backendMessage) {
+          setError(backendMessage);
+        } else if (status === 422) {
+          setError('Dados inválidos. Verifique se o CPF, telefone e e-mail estão corretos.');
+        } else if (status === 400) {
+          setError('Não foi possível cadastrar o profissional. Verifique os dados informados.');
+        } else {
+          setError('Não foi possível cadastrar o profissional. Tente novamente.');
+        }
+      } else {
+        setError(err?.message || 'Não foi possível cadastrar o profissional. Tente novamente.');
+      }
+    }
     finally { setSubmitting(false); }
   }
 
   async function handleUpdate() {
-    if (!name.trim()) { setError('O nome do profissional e obrigatorio.'); return; }
+    if (!name.trim()) { setError('O nome do profissional é obrigatório.'); return; }
+    if (name.trim().split(/\s+/).length < 2) { setError('Por favor, informe o nome completo (nome e sobrenome).'); return; }
+    // Validação de telefone (padrão BR: 10 ou 11 dígitos) — só valida se preenchido na edição
+    if (phone.trim()) {
+      const phoneDigits = phone.replace(/\D/g, '');
+      if (phoneDigits.length < 10 || phoneDigits.length > 11) { setError('Telefone incompleto. Digite o número completo com DDD (10 ou 11 dígitos).'); return; }
+    }
     if (!onUpdate) return;
     setError(''); setSubmitting(true);
     try {
       await onUpdate({ name: name.trim(), nickname: nickname.trim() || undefined, specialty: specialty.trim() || undefined, phone: phone.trim() || undefined, email: email.trim() || undefined, commission: Number(commission) || undefined });
-    } catch (err: any) { setError(err?.message || 'Nao foi possivel salvar as alteracoes.'); }
+    } catch (err: any) {
+      if (isAxiosError(err)) {
+        const status = err.response?.status;
+        const backendMessage =
+          err.response?.data?.message ||
+          (typeof err.response?.data === 'string' ? err.response?.data : null);
+        if (backendMessage) {
+          setError(backendMessage);
+        } else if (status === 422) {
+          setError('Dados inválidos. Verifique as informações e tente novamente.');
+        } else {
+          setError('Não foi possível salvar as alterações. Tente novamente.');
+        }
+      } else {
+        setError('Não foi possível salvar as alterações. Tente novamente.');
+      }
+    }
     finally { setSubmitting(false); }
+  }
+
+  function handleDeleteProfessional() {
+    if (!professional?.id || !onDelete) return;
+    const profId = professional.id;
+    const profName = professional.name ?? 'este profissional';
+    const message = `Tem certeza da exclusão? Os dados de ${profName} serão excluídos permanentemente.`;
+
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(message);
+      if (confirmed) doDelete(profId);
+      return;
+    }
+
+    Alert.alert(
+      'Excluir Profissional',
+      message,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Excluir', style: 'destructive', onPress: () => doDelete(profId) },
+      ]
+    );
+  }
+
+  async function doDelete(profId: string) {
+    setSubmitting(true);
+    try {
+      await onDelete!(profId);
+      resetForm();
+      onClose();
+    } catch (err: any) {
+      if (isAxiosError(err)) {
+        const backendMessage =
+          err.response?.data?.message ||
+          (typeof err.response?.data === 'string' ? err.response?.data : null);
+        setError(backendMessage || 'Não foi possível excluir o profissional.');
+      } else {
+        setError('Não foi possível excluir o profissional.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -342,18 +621,28 @@ export function AddProfessionalModal({
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.formContent} keyboardShouldPersistTaps="handled">
               <InputField label="Nome completo *" placeholder="Ex: Carlos Silva" value={name} onChangeText={setName} />
               <View style={styles.row}>
-                <View style={{ flex: 1 }}><InputField label="Apelido / Exibicao" placeholder="Ex: Carlinhos" value={nickname} onChangeText={setNickname} /></View>
+                <View style={{ flex: 1 }}><InputField label="Apelido / Exibição" placeholder="Ex: Carlinhos" value={nickname} onChangeText={setNickname} /></View>
                 <View style={{ flex: 1 }}><InputField label="Especialidade" placeholder="Ex: Barbeiro Master" value={specialty} onChangeText={setSpecialty} /></View>
               </View>
               <InputField label="E-mail *" placeholder="carlos@barbearia.com" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
               <View style={styles.row}>
                 <View style={{ flex: 1 }}><InputField label="Telefone / Celular *" placeholder="(99) 99999-9999" value={phone} onChangeText={(t) => setPhone(formatPhone(t))} keyboardType="phone-pad" /></View>
-                {!isEdit && <View style={{ flex: 1 }}><InputField label="CPF" placeholder="000.000.000-00" value={cpf} onChangeText={(t) => setCpf(formatCpf(t))} keyboardType="number-pad" /></View>}
+                {!isEdit && <View style={{ flex: 1 }}><InputField label="CPF *" placeholder="000.000.000-00" value={cpf} onChangeText={(t) => setCpf(formatCpf(t))} keyboardType="number-pad" /></View>}
               </View>
-              <InputField label="Comissao Padrao (%)" placeholder="Ex: 50" value={commission} onChangeText={setCommission} keyboardType="number-pad" />
+              <InputField label="Comissão Padrão (%)" placeholder="Ex: 50" value={commission} onChangeText={setCommission} keyboardType="number-pad" />
               {error ? <Text style={[styles.errorText, { fontFamily: fontRegular }]}>{error}</Text> : null}
               <View style={styles.actions}>
                 <Button label={submitting ? 'Salvando...' : isEdit ? 'Salvar Dados' : 'Cadastrar Profissional'} onPress={isEdit ? handleUpdate : handleCreate} disabled={submitting} />
+                {isEdit && onDelete && (
+                  <TouchableOpacity
+                    style={[styles.deleteBtn, submitting && { opacity: 0.5 }]}
+                    onPress={handleDeleteProfessional}
+                    disabled={submitting}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={[styles.deleteBtnText, { fontFamily: fontSemiBold }]}>Excluir Profissional</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </ScrollView>
           )}
@@ -422,7 +711,17 @@ const styles = StyleSheet.create({
   formContent: { paddingHorizontal: 24, paddingTop: 18, gap: 16, paddingBottom: 8 },
   row: { flexDirection: 'row', gap: 12 },
   errorText: { color: Colors.error, fontSize: 13, textAlign: 'center' },
-  actions: { marginTop: 8, paddingBottom: 12 },
+  actions: { marginTop: 8, paddingBottom: 12, gap: 12 },
+  deleteBtn: {
+    height: 52,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#DC2626',
+    width: '100%',
+    marginTop: 0,
+  },
+  deleteBtnText: { fontSize: 16, color: '#FFFFFF', letterSpacing: -0.32, lineHeight: 24.8 },
 });
 
 const jStyles = StyleSheet.create({
@@ -444,13 +743,24 @@ const jStyles = StyleSheet.create({
   formCard: { backgroundColor: Colors.surface, borderRadius: 14, padding: 16, gap: 12, borderWidth: 1, borderColor: Colors.grey100 },
   formLabel: { fontSize: 13, color: Colors.grey500 },
   formError: { fontSize: 12, color: Colors.error },
+  // Chips de dia — agora em grid ao invés de scroll horizontal
   dayScroll: { flexGrow: 0 },
-  dayChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, borderWidth: 1.5, borderColor: Colors.grey200, backgroundColor: Colors.white, marginRight: 6 },
+  dayChipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  dayChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, borderWidth: 1.5, borderColor: Colors.grey200, backgroundColor: Colors.white },
   dayChipSelected: { borderColor: Colors.gold, backgroundColor: Colors.gold },
   dayChipDisabled: { borderColor: Colors.grey100, backgroundColor: Colors.grey100, opacity: 0.5 },
   dayChipText: { fontSize: 12, color: Colors.dark },
   dayChipTextSelected: { color: Colors.white },
   dayChipTextDisabled: { color: Colors.grey400 },
+  // Atalhos de seleção rápida
+  presetRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  presetBtn: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, backgroundColor: Colors.white, borderWidth: 1, borderColor: Colors.grey200 },
+  presetBtnMuted: { backgroundColor: Colors.surface },
+  presetBtnText: { fontSize: 11, color: Colors.dark },
+  // Atalho de horário padrão
+  defaultScheduleBtn: { paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10, backgroundColor: Colors.white, borderWidth: 1.5, borderColor: Colors.gold, alignItems: 'center' },
+  defaultScheduleBtnText: { fontSize: 13, color: Colors.gold },
+  // Horários
   timeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   timeSep: { alignItems: 'center', paddingTop: 4 },
   timeInput: { height: 44, borderRadius: 10, borderWidth: 1.5, borderColor: Colors.grey200, backgroundColor: Colors.white, paddingHorizontal: 14, fontSize: 15, color: Colors.dark, textAlign: 'center' },

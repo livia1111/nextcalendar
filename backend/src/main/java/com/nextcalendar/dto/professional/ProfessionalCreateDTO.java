@@ -20,6 +20,8 @@ public record ProfessionalCreateDTO(
 
     String nickname,
 
+    String specialty,
+
     @NotBlank(message = "CPF é obrigatório para profissional.")
     @CPF(message = "CPF inválido.")
     String cpf,

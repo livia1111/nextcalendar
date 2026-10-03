@@ -1,17 +1,28 @@
 package com.nextcalendar.config;
 
+import tools.jackson.databind.ObjectMapper;
+import com.nextcalendar.repository.UserRepository;
+import com.nextcalendar.service.JwtService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import org.springframework.http.HttpMethod;
-
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 public class SecurityConfig {
+
+    private final JwtService jwtService;
+    private final UserRepository userRepository;
+    private final ObjectMapper objectMapper;
+
+    public SecurityConfig(JwtService jwtService, UserRepository userRepository, ObjectMapper objectMapper) {
+        this.jwtService = jwtService;
+        this.userRepository = userRepository;
+        this.objectMapper = objectMapper;
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -19,49 +30,33 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(
-            HttpSecurity http
-    ) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        MustChangePasswordFilter mustChangePasswordFilter =
+                new MustChangePasswordFilter(jwtService, userRepository, objectMapper);
+        JwtAuthenticationFilter jwtAuthFilter =
+                new JwtAuthenticationFilter(jwtService, userRepository);
 
         http
                 .cors(org.springframework.security.config.Customizer.withDefaults())
-
                 .csrf(csrf -> csrf.disable())
-
                 .headers(headers -> headers
-                        .frameOptions(frame -> frame.disable())
+                        .frameOptions(frame -> frame.disable()) // necessário para o H2 Console
                 )
-
                 .authorizeHttpRequests(auth -> auth
-
-                        /*
-                         * Permite o preflight CORS.
-                         *
-                         * O navegador envia OPTIONS antes de
-                         * requisições como PATCH.
-                         */
+                        // Rotas públicas
                         .requestMatchers(
-                                HttpMethod.OPTIONS,
-                                "/**"
+                                "/api/v1/auth/**",   // login e registro
+                                "/h2-console/**",    // console do banco em dev
+                                "/swagger-ui/**",    // Swagger UI
+                                "/v3/api-docs/**"    // OpenAPI docs
                         ).permitAll()
-
-                        /*
-                         * Rotas públicas.
-                         */
-                        .requestMatchers(
-                                "/api/v1/auth/**",
-                                "/h2-console/**",
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**"
-                        ).permitAll()
-
-                        /*
-                         * Temporariamente liberado enquanto
-                         * o JWT não estiver completo.
-                         */
+                        // Todas as outras liberadas para validação granular por filtros e services
                         .anyRequest().permitAll()
-                );
+                )
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(mustChangePasswordFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 }
+

@@ -1,4 +1,3 @@
-import { size } from 'zod';
 import api from './api';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -7,8 +6,9 @@ export type ProfessionalMin = {
   id: string;
   name: string;
   nickname?: string;
-  phone?: string;
+  cpf?: string;
   email?: string;
+  phone?: string;
   photoUrl?: string | null;
   specialty?: string;
   active?: boolean;
@@ -20,12 +20,17 @@ export type ProfessionalCreateInput = {
   nickname?: string;
   cpf: string;
   email: string;
-  password?: string;
   phone: string;
+  password?: string;
   gender?: string;
   photoUrl?: string;
   specialty?: string;
   commission?: number;
+};
+
+/** Resposta de criação — inclui temporaryPassword (só neste endpoint). */
+export type ProfessionalCreateResponse = ProfessionalMin & {
+  temporaryPassword?: string;
 };
 
 export type PageResponse<T> = {
@@ -50,14 +55,13 @@ export async function getActiveProfessionals(
   return data;
 }
 
-
 // ─── POST /api/v1/establishments/{establishmentId}/professionals ───────────────
 
 export async function createProfessional(
   establishmentId: string,
   input: ProfessionalCreateInput
-): Promise<ProfessionalMin> {
-  const { data } = await api.post<ProfessionalMin>(
+): Promise<ProfessionalCreateResponse> {
+  const { data } = await api.post<ProfessionalCreateResponse>(
     `/establishments/${establishmentId}/professionals`,
     input
   );
@@ -150,4 +154,31 @@ export async function deactivateProfessional(
   id: string
 ): Promise<void> {
   await api.delete(`/establishments/${establishmentId}/professionals/${id}`);
+}
+
+// ─── GET /api/v1/professionals/me ─────────────────────────────────────────────
+
+export type ProfessionalMe = {
+  id: string;
+  name: string;
+  nickname?: string;
+  cpf: string;
+  email: string;
+  phone: string;
+  gender?: string;
+  photoUrl?: string | null;
+  commission?: number;
+  active: boolean;
+  establishmentId: string;
+  establishmentName: string;
+};
+
+export async function getProfessionalMe(): Promise<ProfessionalMe> {
+  const { data } = await api.get<ProfessionalMe>('/professionals/me');
+  return data;
+}
+
+export async function getProfessionalByUserId(userId: string): Promise<ProfessionalMe> {
+  const { data } = await api.get<ProfessionalMe>(`/professionals/by-user/${userId}`);
+  return data;
 }

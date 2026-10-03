@@ -101,6 +101,12 @@ public class AppointmentService {
             LocalDateTime slotStartDT = date.atTime(cursor);
             LocalDateTime slotEndDT = date.atTime(slotEnd);
 
+            // Pula slots que já passaram
+            if (slotStartDT.isBefore(LocalDateTime.now())) {
+                cursor = cursor.plusMinutes(SLOT_STEP_MINUTES);
+                continue;
+            }
+
             boolean duringLunch = workingHours.getBreakStart() != null
                     && cursor.isBefore(workingHours.getBreakEnd())
                     && slotEnd.isAfter(workingHours.getBreakStart());
@@ -127,6 +133,16 @@ public class AppointmentService {
 
     @Transactional
     public AppointmentResponseDTO createAppointment(UUID establishmentId, AppointmentCreateDTO dto) {
+
+        com.nextcalendar.config.SecurityUtils.getAuthenticatedUser().ifPresent(u -> {
+            if (u.getRole() == com.nextcalendar.entity.UserRole.PROFESSIONAL) {
+                ProfessionalEntity myProf = professionalRepository.findByUserId(u.getId())
+                        .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("Perfil de profissional não localizado."));
+                if (!myProf.getId().equals(dto.professionalId())) {
+                    throw new org.springframework.security.access.AccessDeniedException("Profissionais só podem criar agendamentos para si mesmos.");
+                }
+            }
+        });
 
         ProfessionalEntity professional = findProfessional(dto.professionalId(), establishmentId);
         ServiceEntity service = findService(dto.serviceId(), professional.getEstablishment());
@@ -162,6 +178,16 @@ public class AppointmentService {
 
         AppointmentEntity appointment = findAppointment(id);
 
+        com.nextcalendar.config.SecurityUtils.getAuthenticatedUser().ifPresent(u -> {
+            if (u.getRole() == com.nextcalendar.entity.UserRole.PROFESSIONAL) {
+                ProfessionalEntity myProf = professionalRepository.findByUserId(u.getId())
+                        .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("Perfil de profissional não localizado."));
+                if (!myProf.getId().equals(appointment.getProfessional().getId())) {
+                    throw new org.springframework.security.access.AccessDeniedException("Profissionais só podem cancelar seus próprios agendamentos.");
+                }
+            }
+        });
+
         if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
             throw new BusinessException("Este agendamento já está cancelado.");
         }
@@ -182,6 +208,16 @@ public class AppointmentService {
 
         AppointmentEntity appointment = findAppointment(id);
 
+        com.nextcalendar.config.SecurityUtils.getAuthenticatedUser().ifPresent(u -> {
+            if (u.getRole() == com.nextcalendar.entity.UserRole.PROFESSIONAL) {
+                ProfessionalEntity myProf = professionalRepository.findByUserId(u.getId())
+                        .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("Perfil de profissional não localizado."));
+                if (!myProf.getId().equals(appointment.getProfessional().getId())) {
+                    throw new org.springframework.security.access.AccessDeniedException("Profissionais só podem remarcar seus próprios agendamentos.");
+                }
+            }
+        });
+
         if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
             throw new BusinessException("Não é possível reagendar um agendamento cancelado.");
         }
@@ -189,6 +225,10 @@ public class AppointmentService {
         int durationMinutes = appointment.getService().getDuration();
         LocalDateTime newStart = dto.newStartDateTime();
         LocalDateTime newEnd = newStart.plusMinutes(durationMinutes);
+
+        if (newStart.isBefore(LocalDateTime.now())) {
+            throw new BusinessException("Não é possível reagendar para uma data/horário que já passou.");
+        }
 
         validateAvailability(appointment.getProfessional().getId(), newStart, newEnd, id);
 
@@ -203,9 +243,47 @@ public class AppointmentService {
     @Transactional(readOnly = true)
     public List<AppointmentResponseDTO> findByEstablishmentAndDate(
             UUID establishmentId, UUID professionalId, LocalDate date) {
+
+        com.nextcalendar.config.SecurityUtils.getAuthenticatedUser().ifPresent(u -> {
+            if (u.getRole() == com.nextcalendar.entity.UserRole.PROFESSIONAL) {
+                ProfessionalEntity myProf = professionalRepository.findByUserId(u.getId())
+                        .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("Perfil de profissional não localizado."));
+                if (professionalId != null && !professionalId.equals(myProf.getId())) {
+                    throw new org.springframework.security.access.AccessDeniedException("Profissional não tem permissão para visualizar agenda de outro profissional.");
+                }
+            }
+        });
+
         LocalDateTime start = date.atStartOfDay();
         LocalDateTime end = date.plusDays(1).atStartOfDay();
         return appointmentRepository.findByEstablishmentAndDate(establishmentId, professionalId, start, end)
+                .stream()
+                .map(appointmentMapper::toResponseDTO)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<AppointmentResponseDTO> findMyAppointments(LocalDate date, LocalDate from, LocalDate to) {
+        com.nextcalendar.entity.UserEntity user = com.nextcalendar.config.SecurityUtils.getRequiredAuthenticatedUser();
+        ProfessionalEntity myProf = professionalRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new EntityNotFoundException("Profissional não encontrado para o usuário autenticado.", user.getId()));
+
+        LocalDateTime start;
+        LocalDateTime end;
+
+        if (from != null && to != null) {
+            start = from.atStartOfDay();
+            end = to.plusDays(1).atStartOfDay();
+        } else if (date != null) {
+            start = date.atStartOfDay();
+            end = date.plusDays(1).atStartOfDay();
+        } else {
+            LocalDate today = LocalDate.now();
+            start = today.atStartOfDay();
+            end = today.plusDays(1).atStartOfDay();
+        }
+
+        return appointmentRepository.findByProfessionalIdAndStartDateTimeBetweenOrderByStartDateTimeAsc(myProf.getId(), start, end)
                 .stream()
                 .map(appointmentMapper::toResponseDTO)
                 .toList();

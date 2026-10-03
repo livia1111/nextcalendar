@@ -37,6 +37,7 @@ public class PasswordService {
         }
 
         user.setPasswordHash(passwordEncoder.encode(dto.newPassword()));
+        user.setMustChangePassword(false);
         userRepository.save(user);
     }
 }

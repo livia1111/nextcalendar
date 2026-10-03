@@ -111,13 +111,12 @@ public class EstablishmentController implements EstablishmentApi {
         return establishmentService.getTrialStatus(id);
     }
 
-    // ------------------------------------------------------------------ Auxiliar CEP
+    // ------------------------------------------------------------------ ViaCEP
 
     /**
      * GET /api/v1/cep/{cep}
-     * Consulta ViaCEP para o frontend preencher o endereço automaticamente.
-     * UC01 6a: retorna 422 se CEP inválido.
-     * UC01 6b: retorna 503 se API indisponível (o frontend trata e exibe campos manuais).
+     * Consulta a API do ViaCEP para preenchimento automático de endereço.
+     * UC01 6a: CEP inválido → 422. UC01 6b: API indisponível → 503.
      */
     @Override
     @GetMapping("/cep/{cep}")

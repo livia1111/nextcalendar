@@ -18,6 +18,7 @@ type User = {
   name: string;
   email: string;
   role: 'CUSTOMER' | 'MANAGER' | 'PROFESSIONAL';
+  mustChangePassword: boolean;
 };
 
 type AuthContextType = {
@@ -26,6 +27,7 @@ type AuthContextType = {
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<User>;
   signOut: () => Promise<void>;
+  updateUser: (patch: Partial<User>) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -71,8 +73,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }
 
+  async function updateUser(patch: Partial<User>) {
+    if (!user) return;
+    const updated = { ...user, ...patch };
+    await setStorageItemAsync('authUser', JSON.stringify(updated));
+    setUser(updated);
+  }
+
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, token, isLoading, signIn, signOut, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -20,6 +20,7 @@ public record LoginResponseDTO(
             UUID id,
             String name,
             String email,
-            UserRole role
+            UserRole role,
+            boolean mustChangePassword
     ) {}
 }

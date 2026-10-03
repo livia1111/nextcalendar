@@ -2,6 +2,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
 import { SplashScreen } from '@/components/splash-screen';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { getRoleHomeRoute } from '@/utils/roleHomeRoute';
 
 function RootLayoutNav() {
   const { user, isLoading } = useAuth();
@@ -18,11 +19,7 @@ function RootLayoutNav() {
       router.replace('/login');
     } else if (user && inAuthGroup) {
       // Está logado e tentou acessar login/register — manda para a home certa do perfil
-      if (user.role === 'MANAGER') {
-        router.replace('/(gestor)/homeEmpresa' as any);
-      } else {
-        router.replace('/(tabs)/home' as any);
-      }
+      router.replace(getRoleHomeRoute(user.role) as any);
     }
   }, [user, isLoading, segments]);
 
@@ -38,9 +35,10 @@ function RootLayoutNav() {
       <Stack.Screen name="new-password" />
       <Stack.Screen name="setup-account" />
 
-      {/* Main App (tabs) */}
+      {/* Main App */}
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="(gestor)" />
+      <Stack.Screen name="(profissional)" />
 
       {/* Detail screens */}
       <Stack.Screen name="booking" />

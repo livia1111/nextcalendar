@@ -17,6 +17,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.util.UUID;
 
 @Service
@@ -51,14 +52,48 @@ public class ProfessionalService {
                 .orElseThrow(() -> new EntityNotFoundException("Profissional", id));
     }
 
-    public ProfessionalMeResponseDTO getMyProfile(UUID userId) {
-        ProfessionalEntity professional = professionalRepository.findByUser_Id(userId)
-                .orElseThrow(() -> new EntityNotFoundException("Profissional vinculado ao usuário", userId));
+    // ─── Alfabeto seguro: sem 0/O (ambíguo) e 1/l (ambíguo) ─────────────────
+    private static final String TEMP_PWD_ALPHABET =
+            "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789";
+    private static final int TEMP_PWD_LENGTH = 10;
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
+    /** Gera uma senha temporária de {@value TEMP_PWD_LENGTH} caracteres com SecureRandom. */
+    private String generateTemporaryPassword() {
+        StringBuilder sb = new StringBuilder(TEMP_PWD_LENGTH);
+        for (int i = 0; i < TEMP_PWD_LENGTH; i++) {
+            sb.append(TEMP_PWD_ALPHABET.charAt(SECURE_RANDOM.nextInt(TEMP_PWD_ALPHABET.length())));
+        }
+        return sb.toString();
+    }
+
+    @Transactional(readOnly = true)
+    public ProfessionalMeResponseDTO getMe() {
+        com.nextcalendar.entity.UserEntity user = com.nextcalendar.config.SecurityUtils.getRequiredAuthenticatedUser();
+        ProfessionalEntity professional = professionalRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new EntityNotFoundException("Profissional não encontrado para o usuário logado.", user.getId()));
         return new ProfessionalMeResponseDTO(professional);
+    }
+
+    @Transactional(readOnly = true)
+    public ProfessionalMeResponseDTO findByUserId(UUID userId) {
+        ProfessionalEntity professional = professionalRepository.findByUserId(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Profissional não encontrado para o usuário.", userId));
+        return new ProfessionalMeResponseDTO(professional);
+    }
+
+    @Transactional(readOnly = true)
+    public ProfessionalMeResponseDTO getMyProfile(UUID userId) {
+        return findByUserId(userId);
     }
 
     @Transactional
     public ProfessionalProfileResponseDTO createProfessional(UUID establishmentId, ProfessionalCreateDTO dto) {
+        com.nextcalendar.config.SecurityUtils.getAuthenticatedUser().ifPresent(u -> {
+            if (u.getRole() == UserRole.PROFESSIONAL) {
+                throw new org.springframework.security.access.AccessDeniedException("Profissionais não têm permissão para cadastrar novos profissionais.");
+            }
+        });
 
         if (userRepository.existsByEmail(dto.email()) || professionalRepository.existsByEmail(dto.email())) {
             throw new BusinessException("O e-mail '" + dto.email() + "' já está cadastrado no sistema.");
@@ -70,12 +105,16 @@ public class ProfessionalService {
 
         EstablishmentEntity establishment = findEstablishment(establishmentId);
 
+        // Gera senha temporária — o hash vai para o banco, o texto puro volta só na resposta
+        String temporaryPassword = generateTemporaryPassword();
+
         UserEntity user = new UserEntity();
         user.setName(dto.name());
         user.setEmail(dto.email());
-        user.setPasswordHash(passwordEncoder.encode(dto.password()));
+        user.setPasswordHash(passwordEncoder.encode(temporaryPassword));
         user.setRole(UserRole.PROFESSIONAL);
         user.setActive(true);
+        user.setMustChangePassword(true);   // força troca no primeiro login
 
         UserEntity savedUser = userRepository.save(user);
 
@@ -84,11 +123,27 @@ public class ProfessionalService {
 
         ProfessionalEntity savedProfessional = professionalRepository.save(professional);
 
-        return new ProfessionalProfileResponseDTO(savedProfessional);
+        // Devolve a senha temporária em texto puro SOMENTE aqui — nunca em GET
+        return new ProfessionalProfileResponseDTO(
+                savedProfessional.getName(),
+                savedProfessional.getNickname(),
+                savedProfessional.getCpf(),
+                savedProfessional.getEmail(),
+                savedProfessional.getPhone(),
+                savedProfessional.getGender(),
+                savedProfessional.getPhotoUrl(),
+                savedProfessional.getCommission(),
+                temporaryPassword
+        );
     }
 
     @Transactional
     public ProfessionalDetailsResponseDTO updateProfessionalByAdmin(UUID id, ProfessionalAdminUpdateDTO dto) {
+        com.nextcalendar.config.SecurityUtils.getAuthenticatedUser().ifPresent(u -> {
+            if (u.getRole() == UserRole.PROFESSIONAL) {
+                throw new org.springframework.security.access.AccessDeniedException("Profissionais não têm permissão para editar outros profissionais.");
+            }
+        });
 
         ProfessionalEntity professional = findProfessional(id);
 
@@ -205,6 +260,11 @@ public class ProfessionalService {
 
     @Transactional
     public void deleteProfessional(UUID id) {
+        com.nextcalendar.config.SecurityUtils.getAuthenticatedUser().ifPresent(u -> {
+            if (u.getRole() == UserRole.PROFESSIONAL) {
+                throw new org.springframework.security.access.AccessDeniedException("Profissionais não têm permissão para desativar profissionais.");
+            }
+        });
         ProfessionalEntity professional = findProfessional(id);
 
         professional.setActive(false);

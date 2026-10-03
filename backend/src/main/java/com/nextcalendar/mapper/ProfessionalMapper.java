@@ -5,17 +5,10 @@ import com.nextcalendar.dto.professional.ProfessionalCreateDTO;
 import com.nextcalendar.dto.professional.ProfessionalSelfUpdateDTO;
 import com.nextcalendar.entity.EstablishmentEntity;
 import com.nextcalendar.entity.ProfessionalEntity;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
 public class ProfessionalMapper {
-
-    private final PasswordEncoder passwordEncoder;
-
-    public ProfessionalMapper(PasswordEncoder passwordEncoder) {
-        this.passwordEncoder = passwordEncoder;
-    }
 
     public ProfessionalEntity toEntity(ProfessionalCreateDTO dto, EstablishmentEntity establishment) {
         ProfessionalEntity professional = new ProfessionalEntity();
@@ -23,9 +16,12 @@ public class ProfessionalMapper {
         professional.setEstablishment(establishment);
         professional.setName(dto.name());
         professional.setNickname(dto.nickname());
+        professional.setSpecialty(dto.specialty());
         professional.setCpf(dto.cpf());
         professional.setEmail(dto.email());
-        professional.setPassword(passwordEncoder.encode(dto.password()));
+        // A senha NÃO é definida aqui — é gerada pelo ProfessionalService e
+        // armazenada somente no UserEntity (hash BCrypt). O campo password da
+        // entidade profissional (legado) não é mais preenchido na criação.
         professional.setPhone(dto.phone());
         professional.setGender(dto.gender());
         professional.setPhotoUrl(dto.photoUrl());
@@ -41,6 +37,9 @@ public class ProfessionalMapper {
         }
         if (dto.nickname() != null) {
             professional.setNickname(dto.nickname());
+        }
+        if (dto.specialty() != null) {
+            professional.setSpecialty(dto.specialty());
         }
         if (dto.cpf() != null && !dto.cpf().isBlank()) {
             professional.setCpf(dto.cpf());

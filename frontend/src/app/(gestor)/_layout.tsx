@@ -1,7 +1,9 @@
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
 import { ColorValue, StyleSheet } from 'react-native';
 import { CalendarTabIcon, ClockIcon, UsersIcon, UserTabIcon } from '@/components/icons';
 import { Colors } from '@/constants/colors';
+import { useAuth } from '@/context/AuthContext';
+import { getRoleHomeRoute } from '@/utils/roleHomeRoute';
 
 interface TabBarIconProps {
   focused: boolean;
@@ -29,6 +31,14 @@ function PerfilIcon({ focused }: TabBarIconProps) {
  * hook useEstablishment() para resolver o establishmentId de forma independente.
  */
 export default function GestorTabLayout() {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) return null;
+  if (!user) return <Redirect href="/login" />;
+  if (user.role !== 'MANAGER') {
+    return <Redirect href={getRoleHomeRoute(user.role) as any} />;
+  }
+
   return (
     <Tabs
       screenOptions={{

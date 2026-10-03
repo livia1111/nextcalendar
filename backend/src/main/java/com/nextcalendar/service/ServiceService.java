@@ -39,6 +39,11 @@ public class ServiceService {
 
     @Transactional
     public ServiceMinResponseDTO createService(UUID establishmentId, ServiceCreateDTO serviceDTO){
+        com.nextcalendar.config.SecurityUtils.getAuthenticatedUser().ifPresent(u -> {
+            if (u.getRole() == com.nextcalendar.entity.UserRole.PROFESSIONAL) {
+                throw new org.springframework.security.access.AccessDeniedException("Profissionais não têm permissão para cadastrar ou alterar serviços.");
+            }
+        });
         EstablishmentEntity establishment = findEstablishment(establishmentId);
 
         if(serviceRepository.existsByNameAndEstablishmentAndActiveTrue(serviceDTO.name(),establishment)){
@@ -67,6 +72,11 @@ public class ServiceService {
 
     @Transactional
     public ServiceMinResponseDTO updateService(UUID establishmentId, UUID idService, ServiceUpdateDTO serviceDTO){
+        com.nextcalendar.config.SecurityUtils.getAuthenticatedUser().ifPresent(u -> {
+            if (u.getRole() == com.nextcalendar.entity.UserRole.PROFESSIONAL) {
+                throw new org.springframework.security.access.AccessDeniedException("Profissionais não têm permissão para cadastrar ou alterar serviços.");
+            }
+        });
         EstablishmentEntity establishment = findEstablishment(establishmentId);
 
         ServiceEntity serviceEntity = serviceRepository.findByIdAndEstablishmentAndActiveTrue(idService,establishment)
@@ -105,6 +115,11 @@ public class ServiceService {
 
     @Transactional
     public void deleteService(UUID id){
+        com.nextcalendar.config.SecurityUtils.getAuthenticatedUser().ifPresent(u -> {
+            if (u.getRole() == com.nextcalendar.entity.UserRole.PROFESSIONAL) {
+                throw new org.springframework.security.access.AccessDeniedException("Profissionais não têm permissão para excluir serviços.");
+            }
+        });
         ServiceEntity service = serviceRepository.findByIdAndActiveTrue(id)
                 .orElseThrow(()->new EntityNotFoundException("Serviço",id));
 

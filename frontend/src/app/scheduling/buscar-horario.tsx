@@ -44,12 +44,12 @@ import {
   toDateString,
 } from '@/utils/dateValidation';
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ÔöÇÔöÇÔöÇ Helpers ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
 const MONTHS = [
   'Janeiro',
   'Fevereiro',
-  'Março',
+  'Mar├ºo',
   'Abril',
   'Maio',
   'Junho',
@@ -77,7 +77,7 @@ function buildCalendar(year: number, month: number): (number | null)[] {
 }
 
 /**
- * Formata uma data/hora ISO para exibição em pt-BR.
+ * Formata uma data/hora ISO para exibi├º├úo em pt-BR.
  */
 function formatDateTimePtBr(
   dateTimeStr?: string
@@ -107,10 +107,10 @@ function formatDateTimePtBr(
     }
   );
 
-  return `${dateFormatted} às ${timeFormatted}`;
+  return `${dateFormatted} ├ás ${timeFormatted}`;
 }
 
-// ─── Componente ───────────────────────────────────────────────────────────────
+// ÔöÇÔöÇÔöÇ Componente ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
 export default function BuscarHorarioScreen() {
   const { fontRegular, fontSemiBold } =
@@ -119,8 +119,8 @@ export default function BuscarHorarioScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  // Parâmetros de rota opcionais
-  // (pré-seleção / remarcação)
+  // Par├ómetros de rota opcionais
+  // (pr├®-sele├º├úo / remarca├º├úo)
   const params =
     useLocalSearchParams<{
       professionalId?: string;
@@ -133,7 +133,7 @@ export default function BuscarHorarioScreen() {
 
   /**
    * true quando a tela foi aberta
-   * pelo fluxo de remarcação.
+   * pelo fluxo de remarca├º├úo.
    */
   const isReschedule =
     params.mode === 'reschedule';
@@ -144,14 +144,14 @@ export default function BuscarHorarioScreen() {
   //   loading: loadingEst
   // } = useEstablishment();
 
-  // App opera com um único estabelecimento fixo por decisão de escopo — ver
+  // App opera com um ├║nico estabelecimento fixo por decis├úo de escopo ÔÇö ver
   // src/constants/establishment.ts
   const establishmentId = DEFAULT_ESTABLISHMENT_ID;
 
   const loadingEst = false;
 
 
-  // ── Listas de opções ───────────────────────────────────────────────────────
+  // ÔöÇÔöÇ Listas de op├º├Áes ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
   const [professionals, setProfessionals] =
     useState<ProfessionalMin[]>([]);
@@ -162,7 +162,7 @@ export default function BuscarHorarioScreen() {
   const [loadingLists, setLoadingLists] =
     useState(true);
 
-  // ── Seleções do formulário ─────────────────────────────────────────────────
+  // ÔöÇÔöÇ Sele├º├Áes do formul├írio ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
   const [selectedProfId, setSelectedProfId] =
     useState<string>(
@@ -204,7 +204,7 @@ export default function BuscarHorarioScreen() {
   const [selectedDay, setSelectedDay] =
     useState<number | null>(null);
 
-  // ── Resultado da busca ─────────────────────────────────────────────────────
+  // ÔöÇÔöÇ Resultado da busca ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
   const [slotsResult, setSlotsResult] =
     useState<AvailableSlotsResponse | null>(
@@ -220,7 +220,7 @@ export default function BuscarHorarioScreen() {
   const [searched, setSearched] =
     useState(false);
 
-  // ── Estado da remarcação ───────────────────────────────────────────────────
+  // ÔöÇÔöÇ Estado da remarca├º├úo ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
   const [
     isSubmittingReschedule,
@@ -229,7 +229,7 @@ export default function BuscarHorarioScreen() {
 
   /**
    * Controla o modal exibido depois que
-   * o backend confirma a remarcação.
+   * o backend confirma a remarca├º├úo.
    */
   const [
     showRescheduleSuccessModal,
@@ -237,7 +237,7 @@ export default function BuscarHorarioScreen() {
   ] = useState(false);
 
   /**
-   * Guarda o novo horário escolhido.
+   * Guarda o novo hor├írio escolhido.
    */
   const [
     rescheduleSuccessNewDateTime,
@@ -248,7 +248,7 @@ export default function BuscarHorarioScreen() {
    * Controla a segunda etapa do modal.
    *
    * false:
-   * "Confirmar alteração?"
+   * "Confirmar altera├º├úo?"
    *
    * true:
    * "Agendamento confirmado!"
@@ -259,7 +259,7 @@ export default function BuscarHorarioScreen() {
   ] = useState(false);
 
   /**
-   * Animação do ícone de sucesso.
+   * Anima├º├úo do ├¡cone de sucesso.
    */
   const successIconScale =
     useRef(new Animated.Value(0.5)).current;
@@ -267,7 +267,7 @@ export default function BuscarHorarioScreen() {
   const successIconOpacity =
     useRef(new Animated.Value(0)).current;
 
-  // ─── Carrega listas ao montar ──────────────────────────────────────────────
+  // ÔöÇÔöÇÔöÇ Carrega listas ao montar ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
   useEffect(() => {
     if (!establishmentId) return;
@@ -289,7 +289,7 @@ export default function BuscarHorarioScreen() {
         setProfessionals(profs.content);
         setServices(svcs);
       } catch {
-        // Silencia — o usuário verá
+        // Silencia ÔÇö o usu├írio ver├í
         // dropdowns vazios
       } finally {
         setLoadingLists(false);
@@ -299,7 +299,7 @@ export default function BuscarHorarioScreen() {
     loadLists();
   }, [establishmentId]);
 
-  // ─── Calendário ────────────────────────────────────────────────────────────
+  // ÔöÇÔöÇÔöÇ Calend├írio ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
   const calendar = buildCalendar(
     year,
@@ -336,7 +336,7 @@ export default function BuscarHorarioScreen() {
     setSearched(false);
   }
 
-  // ─── Busca ─────────────────────────────────────────────────────────────────
+  // ÔöÇÔöÇÔöÇ Busca ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
   const canSearch =
     !!selectedProfId &&
@@ -375,20 +375,20 @@ export default function BuscarHorarioScreen() {
 
         if (status === 400) {
           setErrorMsg(
-            'Este profissional não atende nesse dia da semana.'
+            'Este profissional n├úo atende nesse dia da semana.'
           );
         } else if (status === 404) {
           setErrorMsg(
-            'Não foi possível encontrar esse profissional ou serviço.'
+            'N├úo foi poss├¡vel encontrar esse profissional ou servi├ºo.'
           );
         } else {
           setErrorMsg(
-            'Não foi possível buscar horários, tente novamente.'
+            'N├úo foi poss├¡vel buscar hor├írios, tente novamente.'
           );
         }
       } else {
         setErrorMsg(
-          'Não foi possível buscar horários, tente novamente.'
+          'N├úo foi poss├¡vel buscar hor├írios, tente novamente.'
         );
       }
     } finally {
@@ -396,7 +396,7 @@ export default function BuscarHorarioScreen() {
     }
   }
 
-  // ─── Clique no horário ─────────────────────────────────────────────────────
+  // ÔöÇÔöÇÔöÇ Clique no hor├írio ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
   async function handleSlotPress(
     slot: string
@@ -417,27 +417,27 @@ export default function BuscarHorarioScreen() {
         slot
       );
 
-    // Não permitir agendamento ou remarcação para horário que já passou
+    // N├úo permitir agendamento ou remarca├º├úo para hor├írio que j├í passou
     if (
       new Date(
         startDateTime
       ).getTime() <= Date.now()
     ) {
       Alert.alert(
-        'Horário inválido',
+        'Hor├írio inv├ílido',
         isReschedule
-          ? 'Não é possível remarcar para um horário que já passou.'
-          : 'Não é possível agendar em uma data ou horário que já passou.'
+          ? 'N├úo ├® poss├¡vel remarcar para um hor├írio que j├í passou.'
+          : 'N├úo ├® poss├¡vel agendar em uma data ou hor├írio que j├í passou.'
       );
 
       return;
     }
 
-    // ── Modo remarcação ──────────────────────────────────────────────────────
+    // ÔöÇÔöÇ Modo remarca├º├úo ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
     if (isReschedule) {
-      // Evita múltiplos cliques
-      // simultâneos
+      // Evita m├║ltiplos cliques
+      // simult├óneos
       if (isSubmittingReschedule) {
         return;
       }
@@ -452,7 +452,7 @@ export default function BuscarHorarioScreen() {
       if (!apptId) {
         Alert.alert(
           'Erro',
-          'Não foi possível identificar o agendamento que será remarcado.'
+          'N├úo foi poss├¡vel identificar o agendamento que ser├í remarcado.'
         );
 
         return;
@@ -496,11 +496,11 @@ export default function BuscarHorarioScreen() {
         );
 
         /**
-         * O backend já confirmou a alteração.
+         * O backend j├í confirmou a altera├º├úo.
          *
-         * Porém, não saímos da tela imediatamente.
+         * Por├®m, n├úo sa├¡mos da tela imediatamente.
          *
-         * Primeiro mostramos o modal de confirmação.
+         * Primeiro mostramos o modal de confirma├º├úo.
          */
         setRescheduleSuccessNewDateTime(
           startDateTime
@@ -510,7 +510,7 @@ export default function BuscarHorarioScreen() {
           false
         );
 
-        // Reset da animação
+        // Reset da anima├º├úo
         successIconScale.setValue(0.5);
         successIconOpacity.setValue(0);
 
@@ -528,13 +528,13 @@ export default function BuscarHorarioScreen() {
           err.response?.status === 400
         ) {
           Alert.alert(
-            'Horário indisponível',
-            'Não foi possível remarcar para este horário. Ele pode ter ficado indisponível.'
+            'Hor├írio indispon├¡vel',
+            'N├úo foi poss├¡vel remarcar para este hor├írio. Ele pode ter ficado indispon├¡vel.'
           );
         } else {
           Alert.alert(
             'Erro',
-            'Não foi possível remarcar o agendamento. Tente novamente.'
+            'N├úo foi poss├¡vel remarcar o agendamento. Tente novamente.'
           );
         }
       } finally {
@@ -544,8 +544,8 @@ export default function BuscarHorarioScreen() {
       return;
     }
 
-    // ── Modo normal ──────────────────────────────────────────────────────────
-    // Mantém o fluxo existente.
+    // ÔöÇÔöÇ Modo normal ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+    // Mant├®m o fluxo existente.
 
     router.push({
       pathname: './booking',
@@ -571,31 +571,31 @@ export default function BuscarHorarioScreen() {
     });
   }
 
-  // ─── Confirmação final do modal ────────────────────────────────────────────
+  // ÔöÇÔöÇÔöÇ Confirma├º├úo final do modal ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
   function handleConfirmSuccess() {
-    // Evita repetir a animação
+    // Evita repetir a anima├º├úo
     if (showConfirmationSuccess) {
       return;
     }
 
     /**
-     * Primeiro muda o conteúdo do modal
+     * Primeiro muda o conte├║do do modal
      * para a mensagem de sucesso.
      */
     setShowConfirmationSuccess(true);
 
     /**
-     * Reinicia os valores da animação.
+     * Reinicia os valores da anima├º├úo.
      */
     successIconScale.setValue(0.5);
     successIconOpacity.setValue(0);
 
     /**
-     * Animação:
+     * Anima├º├úo:
      *
-     * - opacidade: 0 → 1
-     * - escala: 0.5 → 1
+     * - opacidade: 0 ÔåÆ 1
+     * - escala: 0.5 ÔåÆ 1
      *
      * As duas acontecem juntas.
      */
@@ -621,7 +621,7 @@ export default function BuscarHorarioScreen() {
     ]).start();
 
     /**
-     * Depois que o usuário vê a confirmação,
+     * Depois que o usu├írio v├¬ a confirma├º├úo,
      * fecha o modal e volta para os agendamentos.
      */
     setTimeout(() => {
@@ -637,7 +637,7 @@ export default function BuscarHorarioScreen() {
     }, 1800);
   }
 
-  // ─── Loading inicial ───────────────────────────────────────────────────────
+  // ÔöÇÔöÇÔöÇ Loading inicial ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
   if (loadingEst || loadingLists) {
     return (
@@ -664,7 +664,7 @@ export default function BuscarHorarioScreen() {
       s => s.id === selectedServiceId
     )?.name ?? '';
 
-  // ─── Render ────────────────────────────────────────────────────────────────
+  // ÔöÇÔöÇÔöÇ Render ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
   return (
     <View
@@ -696,7 +696,7 @@ export default function BuscarHorarioScreen() {
           ]}>
           {isReschedule
             ? 'Remarcar Agendamento'
-            : 'Pesquisa Avançada de Horário'}
+            : 'Pesquisa Avan├ºada de Hor├írio'}
         </Text>
 
         <View
@@ -716,7 +716,7 @@ export default function BuscarHorarioScreen() {
           false
         }>
 
-        {/* ── Seletor de Serviço ─────────────────────────────────────────── */}
+        {/* ÔöÇÔöÇ Seletor de Servi├ºo ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */}
 
         <View style={styles.section}>
           <Text
@@ -727,7 +727,7 @@ export default function BuscarHorarioScreen() {
                   fontSemiBold,
               },
             ]}>
-            Serviço
+            Servi├ºo
           </Text>
 
           {isReschedule ? (
@@ -742,7 +742,7 @@ export default function BuscarHorarioScreen() {
                   },
                 ]}>
                 {selectedServiceName ||
-                  'Serviço do agendamento'}
+                  'Servi├ºo do agendamento'}
               </Text>
 
               <Text
@@ -753,7 +753,7 @@ export default function BuscarHorarioScreen() {
                       fontRegular,
                   },
                 ]}>
-                Não editável neste fluxo
+                N├úo edit├ível neste fluxo
               </Text>
             </View>
           ) : services.length === 0 ? (
@@ -765,7 +765,7 @@ export default function BuscarHorarioScreen() {
                     fontRegular,
                 },
               ]}>
-              Nenhum serviço cadastrado.
+              Nenhum servi├ºo cadastrado.
             </Text>
           ) : (
             <ScrollView
@@ -813,7 +813,7 @@ export default function BuscarHorarioScreen() {
           )}
         </View>
 
-        {/* ── Seletor de Profissional ────────────────────────────────────── */}
+        {/* ÔöÇÔöÇ Seletor de Profissional ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */}
 
         <View style={styles.section}>
           <Text
@@ -850,7 +850,7 @@ export default function BuscarHorarioScreen() {
                       fontRegular,
                   },
                 ]}>
-                Não editável neste fluxo
+                N├úo edit├ível neste fluxo
               </Text>
             </View>
           ) : professionals.length ===
@@ -911,7 +911,7 @@ export default function BuscarHorarioScreen() {
           )}
         </View>
 
-        {/* ── Calendário ────────────────────────────────────────────────── */}
+        {/* ÔöÇÔöÇ Calend├írio ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */}
 
         <View style={styles.section}>
           <Text
@@ -930,7 +930,7 @@ export default function BuscarHorarioScreen() {
               styles.calendarCard
             }>
 
-            {/* Navegação de mês */}
+            {/* Navega├º├úo de m├¬s */}
 
             <View
               style={styles.monthNav}>
@@ -1064,7 +1064,7 @@ export default function BuscarHorarioScreen() {
           </View>
         </View>
 
-        {/* ── Resumo da seleção ──────────────────────────────────────────── */}
+        {/* ÔöÇÔöÇ Resumo da sele├º├úo ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */}
 
         {(selectedServiceName ||
           selectedProfName ||
@@ -1083,7 +1083,7 @@ export default function BuscarHorarioScreen() {
                       fontRegular,
                   },
                 ]}>
-                📋{' '}
+                ­ƒôï{' '}
                 <Text
                   style={{
                     fontFamily:
@@ -1105,7 +1105,7 @@ export default function BuscarHorarioScreen() {
                       fontRegular,
                   },
                 ]}>
-                ✂️{' '}
+                Ô£é´©Å{' '}
                 <Text
                   style={{
                     fontFamily:
@@ -1125,7 +1125,7 @@ export default function BuscarHorarioScreen() {
                       fontRegular,
                   },
                 ]}>
-                📅{' '}
+                ­ƒôà{' '}
                 <Text
                   style={{
                     fontFamily:
@@ -1147,10 +1147,10 @@ export default function BuscarHorarioScreen() {
           </View>
         )}
 
-        {/* ── Botão Buscar ───────────────────────────────────────────────── */}
+        {/* ÔöÇÔöÇ Bot├úo Buscar ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */}
 
         <Button
-          label="Buscar horários"
+          label="Buscar hor├írios"
           onPress={handleSearch}
           disabled={!canSearch}
           loading={loadingSlots}
@@ -1159,7 +1159,7 @@ export default function BuscarHorarioScreen() {
           }
         />
 
-        {/* ── Resultado ─────────────────────────────────────────────────── */}
+        {/* ÔöÇÔöÇ Resultado ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */}
 
         {searched &&
           !loadingSlots && (
@@ -1195,7 +1195,7 @@ export default function BuscarHorarioScreen() {
                         fontRegular,
                     },
                   ]}>
-                  Nenhum horário disponível para essa data.
+                  Nenhum hor├írio dispon├¡vel para essa data.
                 </Text>
               ) : slotsResult ? (
                 <>
@@ -1207,7 +1207,7 @@ export default function BuscarHorarioScreen() {
                           fontSemiBold,
                       },
                     ]}>
-                    Horários disponíveis
+                    Hor├írios dispon├¡veis
                   </Text>
 
                   {slotsResult.durationMinutes >
@@ -1220,13 +1220,13 @@ export default function BuscarHorarioScreen() {
                             fontRegular,
                         },
                       ]}>
-                      Duração:{' '}
+                      Dura├º├úo:{' '}
                       {
                         slotsResult.durationMinutes
                       } min
                       {slotsResult.price >
                       0
-                        ? `  ·  R$ ${slotsResult.price.toFixed(
+                        ? `  ┬À  R$ ${slotsResult.price.toFixed(
                             2
                           )}`
                         : ''}
@@ -1303,9 +1303,9 @@ export default function BuscarHorarioScreen() {
 
       </ScrollView>
 
-      {/* ────────────────────────────────────────────────────────────────────
-          MODAL DE REMARCAÇÃO
-          ──────────────────────────────────────────────────────────────────── */}
+      {/* ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+          MODAL DE REMARCA├ç├âO
+          ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */}
 
       <Modal
         visible={
@@ -1315,7 +1315,7 @@ export default function BuscarHorarioScreen() {
         animationType="fade"
         statusBarTranslucent
         onRequestClose={() => {
-          // Não permite fechar pelo botão
+          // N├úo permite fechar pelo bot├úo
           // voltar do Android.
         }}>
 
@@ -1331,7 +1331,7 @@ export default function BuscarHorarioScreen() {
 
             {!showConfirmationSuccess ? (
               <>
-                {/* Ícone inicial */}
+                {/* ├ìcone inicial */}
 
                 <View
                   style={
@@ -1342,7 +1342,7 @@ export default function BuscarHorarioScreen() {
                   />
                 </View>
 
-                {/* Título de confirmação */}
+                {/* T├¡tulo de confirma├º├úo */}
 
                 <Text
                   style={[
@@ -1352,7 +1352,7 @@ export default function BuscarHorarioScreen() {
                         fontSemiBold,
                     },
                   ]}>
-                  Confirmar alteração?
+                  Confirmar altera├º├úo?
                 </Text>
 
                 {/* Texto */}
@@ -1366,10 +1366,10 @@ export default function BuscarHorarioScreen() {
                     },
                   ]}>
                   Deseja realmente alterar o
-                  horário deste agendamento?
+                  hor├írio deste agendamento?
                 </Text>
 
-                {/* Horário anterior */}
+                {/* Hor├írio anterior */}
 
                 <View
                   style={
@@ -1383,7 +1383,7 @@ export default function BuscarHorarioScreen() {
                           fontSemiBold,
                       },
                     ]}>
-                    Horário anterior
+                    Hor├írio anterior
                   </Text>
 
                   <Text
@@ -1397,11 +1397,11 @@ export default function BuscarHorarioScreen() {
                     {formatDateTimePtBr(
                       params.startDateTime
                     ) ||
-                      'Não informado'}
+                      'N├úo informado'}
                   </Text>
                 </View>
 
-                {/* Novo horário */}
+                {/* Novo hor├írio */}
 
                 <View
                   style={
@@ -1415,7 +1415,7 @@ export default function BuscarHorarioScreen() {
                           fontSemiBold,
                       },
                     ]}>
-                    Novo horário
+                    Novo hor├írio
                   </Text>
 
                   <Text
@@ -1458,7 +1458,7 @@ export default function BuscarHorarioScreen() {
               </>
             ) : (
               <>
-                {/* ── ANIMAÇÃO DE SUCESSO ── */}
+                {/* ÔöÇÔöÇ ANIMA├ç├âO DE SUCESSO ÔöÇÔöÇ */}
 
                 <Animated.View
                   style={[
@@ -1480,7 +1480,7 @@ export default function BuscarHorarioScreen() {
                   />
                 </Animated.View>
 
-                {/* Título */}
+                {/* T├¡tulo */}
 
                 <Text
                   style={[
@@ -1503,7 +1503,7 @@ export default function BuscarHorarioScreen() {
                         fontRegular,
                     },
                   ]}>
-                  Seu horário foi alterado
+                  Seu hor├írio foi alterado
                   com sucesso.
                 </Text>
               </>
@@ -1516,7 +1516,7 @@ export default function BuscarHorarioScreen() {
   );
 }
 
-// ─── Estilos ──────────────────────────────────────────────────────────────────
+// ÔöÇÔöÇÔöÇ Estilos ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
 const styles = StyleSheet.create({
   container: {
@@ -1617,7 +1617,7 @@ const styles = StyleSheet.create({
     color: Colors.white,
   },
 
-  // Calendário
+  // Calend├írio
 
   calendarCard: {
     backgroundColor:
@@ -1697,7 +1697,7 @@ const styles = StyleSheet.create({
   },
 
   dayTextDisabled: {
-    color: Colors.grey300,
+    color: Colors.grey400,
   },
 
   // Card de resumo
@@ -1739,7 +1739,7 @@ const styles = StyleSheet.create({
     color: Colors.error,
   },
 
-  // Grid de slots disponíveis
+  // Grid de slots dispon├¡veis
 
   slotsGrid: {
     flexDirection: 'row',
@@ -1760,7 +1760,7 @@ const styles = StyleSheet.create({
   slotChipDisabled: {
     opacity: 0.35,
     backgroundColor:
-      Colors.grey300,
+      Colors.grey200,
   },
 
   slotText: {
@@ -1769,7 +1769,7 @@ const styles = StyleSheet.create({
   },
 
   // Chip travado
-  // (modo remarcação)
+  // (modo remarca├º├úo)
 
   lockedChip: {
     paddingHorizontal: 16,
@@ -1795,9 +1795,9 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
 
-  // ────────────────────────────────────────────────────────────────────────
+  // ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
   // Modal
-  // ────────────────────────────────────────────────────────────────────────
+  // ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
   successModalOverlay: {
     flex: 1,
@@ -1818,7 +1818,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  // Ícone da confirmação inicial
+  // ├ìcone da confirma├º├úo inicial
 
   confirmIconCircle: {
     width: 64,
@@ -1831,7 +1831,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
 
-  // Ícone animado de sucesso
+  // ├ìcone animado de sucesso
 
   successIconCircle: {
     width: 64,

@@ -67,4 +67,11 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.CONFLICT)
                 .body("Este horário acabou de ser reservado por outro cliente. Por favor, escolha outro horário.");
     }
+
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<String> handleAccessDenied(org.springframework.security.access.AccessDeniedException ex) {
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(ex.getMessage() != null ? ex.getMessage() : "Acesso negado.");
+    }
 }

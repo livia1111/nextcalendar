@@ -12,6 +12,7 @@ import { Colors } from '@/constants/colors';
 import { useAppFonts } from '@/hooks/use-fonts';
 import { LoginSchema }  from '@/schemas/authSchemas';
 import { useAuth } from '@/context/AuthContext';
+import { getRoleHomeRoute } from '@/utils/roleHomeRoute';
 
 
 
@@ -41,11 +42,7 @@ export default function LoginScreen() {
 
   try{
     const loggedUser = await signIn(result.data.email, result.data.password);
-    if (loggedUser.role === 'MANAGER') {
-      router.push('/(gestor)/homeEmpresa' as any);
-    } else {
-      router.push('/(tabs)/home' as any);
-    }
+    router.push(getRoleHomeRoute(loggedUser.role) as any);
   } catch(err:any){
     setError(err.message ?? 'Não foi possivel entrar. Tente novamente')
   }finally{

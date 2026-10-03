@@ -1,4 +1,5 @@
 import api from './api';
+import { isAxiosError } from 'axios';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -113,9 +114,19 @@ export async function deleteClient(id: string): Promise<void> {
   await api.delete(`/clients/${id}`);
 }
 // ─── GET /api/v1/clients/by-user/{userId} ─────────────────────────────────────
-// Busca o cliente vinculado a um usuário autenticado (User -> Client)
+// Busca o cliente vinculado a um usuário autenticado (User -> Client).
+// Retorna null quando o usuário não tem perfil de cliente (ex: gestores).
 
-export async function getClientByUserId(userId: string): Promise<ClientDetails> {
-  const { data } = await api.get<ClientDetails>(`/clients/by-user/${userId}`);
-  return data;
+export async function getClientByUserId(userId: string): Promise<ClientDetails | null> {
+  try {
+    const { data } = await api.get<ClientDetails>(`/clients/by-user/${userId}`);
+    return data;
+  } catch (err) {
+    // 404 = usuário autenticado, mas sem registro na tabela clients (ex: gestor)
+    // Retorna null silenciosamente para que a tela trate como "sem perfil"
+    if (isAxiosError(err) && err.response?.status === 404) {
+      return null;
+    }
+    throw err;
+  }
 }

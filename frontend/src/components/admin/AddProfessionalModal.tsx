@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Clipboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -21,6 +22,7 @@ import { useAppFonts } from '@/hooks/use-fonts';
 import {
   type ProfessionalAdminUpdateInput,
   type ProfessionalCreateInput,
+  type ProfessionalCreateResponse,
   type ProfessionalMin,
 } from '@/services/professionalServices';
 import {
@@ -50,6 +52,21 @@ const DAY_SHORT: Record<DayOfWeek, string> = {
 function formatCpf(val: string): string {
   const d = val.replace(/\D/g, '').slice(0, 11);
   return d.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+}
+
+/** Valida os dígitos verificadores de um CPF brasileiro. */
+function isValidCpf(val: string): boolean {
+  const d = val.replace(/\D/g, '');
+  if (d.length !== 11) return false;
+  // Rejeita sequências triviais (ex: 111.111.111-11)
+  if (/^(\d)\1{10}$/.test(d)) return false;
+  const calcDigit = (base: string, len: number): number => {
+    let sum = 0;
+    for (let i = 0; i < len; i++) sum += parseInt(base[i]) * (len + 1 - i);
+    const rem = (sum * 10) % 11;
+    return rem === 10 ? 0 : rem;
+  };
+  return calcDigit(d, 9) === parseInt(d[9]) && calcDigit(d, 10) === parseInt(d[10]);
 }
 function maskTime(raw: string): string {
   const d = raw.replace(/\D/g, '').slice(0, 4);
@@ -114,10 +131,10 @@ function JornadaForm({ initial, disabledDays = [], onSave, onCancel, fontRegular
   /** Atalhos de seleção rápida. */
   function selectPreset(preset: 'weekdays' | 'weekdaysSat' | 'all' | 'none') {
     const available = (days: DayOfWeek[]) => days.filter((d) => !disabledDays.includes(d));
-    if (preset === 'weekdays')    setSelectedDays(available(['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY']));
-    if (preset === 'weekdaysSat') setSelectedDays(available(['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY']));
-    if (preset === 'all')         setSelectedDays(available(DAYS_ORDER));
-    if (preset === 'none')        setSelectedDays([]);
+    if (preset === 'weekdays') setSelectedDays(available(['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']));
+    if (preset === 'weekdaysSat') setSelectedDays(available(['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY']));
+    if (preset === 'all') setSelectedDays(available(DAYS_ORDER));
+    if (preset === 'none') setSelectedDays([]);
   }
 
   /** Atalho de horário comercial padrão. */
@@ -238,8 +255,8 @@ function JornadaForm({ initial, disabledDays = [], onSave, onCancel, fontRegular
           {saving
             ? <ActivityIndicator color={Colors.white} size="small" />
             : <Text style={[jStyles.saveBtnText, { fontFamily: fontSemiBold }]}>
-                {isEditing ? 'Salvar' : `Salvar${selectedDays.length > 1 ? ` (${selectedDays.length} dias)` : ''}`}
-              </Text>
+              {isEditing ? 'Salvar' : `Salvar${selectedDays.length > 1 ? ` (${selectedDays.length} dias)` : ''}`}
+            </Text>
           }
         </TouchableOpacity>
       </View>
@@ -289,14 +306,41 @@ function JornadaTab({ establishmentId, professionalId, fontRegular, fontSemiBold
     await load();
   }
 
+  async function doDelete(wh: WorkingHours) {
+    try {
+      await deleteWorkingHours(establishmentId, professionalId, wh.id);
+      await load();
+    } catch {
+      Alert.alert('Erro', 'Nao foi possivel remover a jornada.');
+    }
+  }
+
   function handleDelete(wh: WorkingHours) {
-    Alert.alert('Remover jornada', 'Tem certeza que deseja remover a jornada de ' + DAY_LABEL[wh.dayOfWeek] + '?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Remover', style: 'destructive', onPress: async () => {
-        try { await deleteWorkingHours(establishmentId, professionalId, wh.id); await load(); }
-        catch { Alert.alert('Erro', 'Nao foi possivel remover a jornada.'); }
-      }},
-    ]);
+    // Alert.alert com múltiplos botões não funciona de forma confiável na web
+    // (react-native-web não implementa os callbacks de botão). Por isso,
+    // usamos window.confirm() nativo do navegador quando rodando na web.
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(
+        `Remover jornada de ${DAY_LABEL[wh.dayOfWeek]}? Esta ação não pode ser desfeita.`
+      );
+      if (confirmed) {
+        doDelete(wh);
+      }
+      return;
+    }
+
+    Alert.alert(
+      'Remover jornada',
+      'Tem certeza que deseja remover a jornada de ' + DAY_LABEL[wh.dayOfWeek] + '?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Remover',
+          style: 'destructive',
+          onPress: () => doDelete(wh),
+        },
+      ]
+    );
   }
 
   const registeredDays = hours.map((h) => h.dayOfWeek);
@@ -366,15 +410,16 @@ function JornadaTab({ establishmentId, professionalId, fontRegular, fontSemiBold
 interface AddProfessionalModalProps {
   visible: boolean;
   onClose: () => void;
-  onSubmit: (data: ProfessionalCreateInput) => Promise<void>;
+  onSubmit?: (data: ProfessionalCreateInput) => Promise<ProfessionalCreateResponse | void>;
   mode?: 'create' | 'edit';
   professional?: ProfessionalMin;
   establishmentId?: string;
   onUpdate?: (data: ProfessionalAdminUpdateInput) => Promise<void>;
+  onDelete?: (id: string) => Promise<void>;
 }
 
 export function AddProfessionalModal({
-  visible, onClose, onSubmit, mode = 'create', professional, establishmentId, onUpdate,
+  visible, onClose, onSubmit, mode = 'create', professional, establishmentId, onUpdate, onDelete,
 }: AddProfessionalModalProps) {
   const { fontSemiBold, fontRegular } = useAppFonts();
   const isEdit = mode === 'edit';
@@ -390,12 +435,19 @@ export function AddProfessionalModal({
   const [error, setError] = useState('');
   const prevVisible = useRef(false);
 
+  // Estado para o modal de senha temporária
+  const [tempPassword, setTempPassword] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
   useEffect(() => {
     if (visible && !prevVisible.current) {
       if (isEdit && professional) {
-        setName(professional.name ?? ''); setNickname(professional.nickname ?? '');
-        setSpecialty(professional.specialty ?? ''); setPhone(professional.phone ?? '');
-        setEmail(professional.email ?? ''); setCommission(String(professional.commission ?? 50));
+        setName(professional.name ?? '');
+        setNickname(professional.nickname ?? '');
+        setSpecialty(professional.specialty ?? '');
+        setPhone(formatPhone(professional.phone ?? ''));
+        setEmail(professional.email ?? '');
+        setCommission(String(professional.commission ?? 50));
       } else { resetForm(); }
       setActiveTab('dados');
     }
@@ -405,28 +457,137 @@ export function AddProfessionalModal({
   function resetForm() { setName(''); setNickname(''); setSpecialty(''); setCpf(''); setPhone(''); setEmail(''); setCommission('50'); setError(''); }
 
   async function handleCreate() {
-    if (!name.trim()) { setError('O nome do profissional e obrigatorio.'); return; }
-    if (!email.trim() || !email.includes('@')) { setError('Informe um e-mail valido.'); return; }
-    if (!phone.trim()) { setError('Informe um telefone de contato.'); return; }
+    // Validação: nome completo (mínimo nome + sobrenome)
+    if (!name.trim()) { setError('O nome do profissional é obrigatório.'); return; }
+    if (name.trim().split(/\s+/).length < 2) { setError('Por favor, informe o nome completo (nome e sobrenome).'); return; }
+    if (!email.trim() || !email.includes('@')) { setError('Informe um e-mail válido.'); return; }
+    // Validação de telefone (padrão BR: 10 ou 11 dígitos)
+    const phoneDigits = phone.replace(/\D/g, '');
+    if (!phoneDigits) { setError('O telefone é obrigatório.'); return; }
+    if (phoneDigits.length < 10 || phoneDigits.length > 11) { setError('Telefone incompleto. Digite o número completo com DDD (10 ou 11 dígitos).'); return; }
+    // Validação de CPF
+    const cpfDigits = cpf.replace(/\D/g, '');
+    if (!cpfDigits || cpfDigits.length < 11) { setError('O CPF é obrigatório.'); return; }
+    if (!isValidCpf(cpfDigits)) { setError('CPF inválido. Verifique os dígitos informados.'); return; }
     setError(''); setSubmitting(true);
     try {
-      await onSubmit({ name: name.trim(), nickname: nickname.trim() || undefined, specialty: specialty.trim() || 'Profissional', cpf: cpf.replace(/\D/g, '') || '000.000.000-00', phone: phone.trim(), email: email.trim(), password: 'TempPassword123!', commission: Number(commission) || 50 });
-      resetForm(); onClose();
-    } catch (err: any) { setError(err?.message || 'Nao foi possivel cadastrar o profissional.'); }
+      if (!onSubmit) return;
+      // Não enviamos senha — o backend gera automaticamente
+      const result = await onSubmit({
+        name: name.trim(),
+        nickname: nickname.trim() || undefined,
+        specialty: specialty.trim() || undefined,
+        cpf: cpfDigits,
+        phone: phone.trim(),
+        email: email.trim(),
+        commission: Number(commission) || 50,
+      });
+      resetForm();
+      // Exibe a senha temporária — não chamamos onClose aqui para o modal de credenciais aparecer
+      if (result && 'temporaryPassword' in result && result.temporaryPassword) {
+        setTempPassword(result.temporaryPassword);
+        setCopied(false);
+      } else {
+        onClose();
+      }
+    } catch (err: any) {
+      if (isAxiosError(err)) {
+        const status = err.response?.status;
+        const backendMessage =
+          err.response?.data?.message ||
+          (typeof err.response?.data === 'string' ? err.response?.data : null);
+        if (backendMessage) {
+          setError(backendMessage);
+        } else if (status === 422) {
+          setError('Dados inválidos. Verifique se o CPF, telefone e e-mail estão corretos.');
+        } else if (status === 400) {
+          setError('Não foi possível cadastrar o profissional. Verifique os dados informados.');
+        } else {
+          setError('Não foi possível cadastrar o profissional. Tente novamente.');
+        }
+      } else {
+        setError(err?.message || 'Não foi possível cadastrar o profissional. Tente novamente.');
+      }
+    }
     finally { setSubmitting(false); }
   }
 
   async function handleUpdate() {
-    if (!name.trim()) { setError('O nome do profissional e obrigatorio.'); return; }
+    if (!name.trim()) { setError('O nome do profissional é obrigatório.'); return; }
+    if (name.trim().split(/\s+/).length < 2) { setError('Por favor, informe o nome completo (nome e sobrenome).'); return; }
+    // Validação de telefone (padrão BR: 10 ou 11 dígitos) — só valida se preenchido na edição
+    if (phone.trim()) {
+      const phoneDigits = phone.replace(/\D/g, '');
+      if (phoneDigits.length < 10 || phoneDigits.length > 11) { setError('Telefone incompleto. Digite o número completo com DDD (10 ou 11 dígitos).'); return; }
+    }
     if (!onUpdate) return;
     setError(''); setSubmitting(true);
     try {
       await onUpdate({ name: name.trim(), nickname: nickname.trim() || undefined, specialty: specialty.trim() || undefined, phone: phone.trim() || undefined, email: email.trim() || undefined, commission: Number(commission) || undefined });
-    } catch (err: any) { setError(err?.message || 'Nao foi possivel salvar as alteracoes.'); }
+    } catch (err: any) {
+      if (isAxiosError(err)) {
+        const status = err.response?.status;
+        const backendMessage =
+          err.response?.data?.message ||
+          (typeof err.response?.data === 'string' ? err.response?.data : null);
+        if (backendMessage) {
+          setError(backendMessage);
+        } else if (status === 422) {
+          setError('Dados inválidos. Verifique as informações e tente novamente.');
+        } else {
+          setError('Não foi possível salvar as alterações. Tente novamente.');
+        }
+      } else {
+        setError('Não foi possível salvar as alterações. Tente novamente.');
+      }
+    }
     finally { setSubmitting(false); }
   }
 
+  function handleDeleteProfessional() {
+    if (!professional?.id || !onDelete) return;
+    const profId = professional.id;
+    const profName = professional.name ?? 'este profissional';
+    const message = `Tem certeza da exclusão? Os dados de ${profName} serão excluídos permanentemente.`;
+
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(message);
+      if (confirmed) doDelete(profId);
+      return;
+    }
+
+    Alert.alert(
+      'Excluir Profissional',
+      message,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Excluir', style: 'destructive', onPress: () => doDelete(profId) },
+      ]
+    );
+  }
+
+  async function doDelete(profId: string) {
+    setSubmitting(true);
+    try {
+      await onDelete!(profId);
+      resetForm();
+      onClose();
+    } catch (err: any) {
+      if (isAxiosError(err)) {
+        const backendMessage =
+          err.response?.data?.message ||
+          (typeof err.response?.data === 'string' ? err.response?.data : null);
+        setError(backendMessage || 'Não foi possível excluir o profissional.');
+      } else {
+        setError('Não foi possível excluir o profissional.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
+    <>
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.overlay}>
         <View style={styles.sheet}>
@@ -460,24 +621,77 @@ export function AddProfessionalModal({
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.formContent} keyboardShouldPersistTaps="handled">
               <InputField label="Nome completo *" placeholder="Ex: Carlos Silva" value={name} onChangeText={setName} />
               <View style={styles.row}>
-                <View style={{ flex: 1 }}><InputField label="Apelido / Exibicao" placeholder="Ex: Carlinhos" value={nickname} onChangeText={setNickname} /></View>
+                <View style={{ flex: 1 }}><InputField label="Apelido / Exibição" placeholder="Ex: Carlinhos" value={nickname} onChangeText={setNickname} /></View>
                 <View style={{ flex: 1 }}><InputField label="Especialidade" placeholder="Ex: Barbeiro Master" value={specialty} onChangeText={setSpecialty} /></View>
               </View>
               <InputField label="E-mail *" placeholder="carlos@barbearia.com" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
               <View style={styles.row}>
                 <View style={{ flex: 1 }}><InputField label="Telefone / Celular *" placeholder="(99) 99999-9999" value={phone} onChangeText={(t) => setPhone(formatPhone(t))} keyboardType="phone-pad" /></View>
-                {!isEdit && <View style={{ flex: 1 }}><InputField label="CPF" placeholder="000.000.000-00" value={cpf} onChangeText={(t) => setCpf(formatCpf(t))} keyboardType="number-pad" /></View>}
+                {!isEdit && <View style={{ flex: 1 }}><InputField label="CPF *" placeholder="000.000.000-00" value={cpf} onChangeText={(t) => setCpf(formatCpf(t))} keyboardType="number-pad" /></View>}
               </View>
-              <InputField label="Comissao Padrao (%)" placeholder="Ex: 50" value={commission} onChangeText={setCommission} keyboardType="number-pad" />
+              <InputField label="Comissão Padrão (%)" placeholder="Ex: 50" value={commission} onChangeText={setCommission} keyboardType="number-pad" />
               {error ? <Text style={[styles.errorText, { fontFamily: fontRegular }]}>{error}</Text> : null}
               <View style={styles.actions}>
                 <Button label={submitting ? 'Salvando...' : isEdit ? 'Salvar Dados' : 'Cadastrar Profissional'} onPress={isEdit ? handleUpdate : handleCreate} disabled={submitting} />
+                {isEdit && onDelete && (
+                  <TouchableOpacity
+                    style={[styles.deleteBtn, submitting && { opacity: 0.5 }]}
+                    onPress={handleDeleteProfessional}
+                    disabled={submitting}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={[styles.deleteBtnText, { fontFamily: fontSemiBold }]}>Excluir Profissional</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </ScrollView>
           )}
         </View>
       </KeyboardAvoidingView>
     </Modal>
+
+    {/* ─── Modal de Senha Temporária ─────────────────────────────────────────
+        Aparece logo após a criação bem-sucedida. A senha só é exibida aqui,
+        nunca é salva em estado persistente nem logada.
+    */}
+    <Modal visible={!!tempPassword} transparent animationType="fade">
+      <View style={tmpStyles.overlay}>
+        <View style={tmpStyles.card}>
+          <Text style={[tmpStyles.title, { fontFamily: fontSemiBold }]}>
+            🔑 Senha Temporária
+          </Text>
+          <Text style={[tmpStyles.info, { fontFamily: fontRegular }]}>
+            Compartilhe esta senha com o profissional. Ele será obrigado a trocá-la no primeiro acesso.
+          </Text>
+          <View style={tmpStyles.pwdBox}>
+            <Text style={[tmpStyles.pwdText, { fontFamily: fontSemiBold }]} selectable>
+              {tempPassword}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[tmpStyles.copyBtn, copied && tmpStyles.copyBtnDone]}
+            onPress={() => {
+              Clipboard.setString(tempPassword ?? '');
+              setCopied(true);
+            }}
+            activeOpacity={0.8}>
+            <Text style={[tmpStyles.copyBtnText, { fontFamily: fontSemiBold }]}>
+              {copied ? '✓ Copiado!' : 'Copiar senha'}
+            </Text>
+          </TouchableOpacity>
+          <Text style={[tmpStyles.warning, { fontFamily: fontRegular }]}>
+            ⚠️ Esta senha aparece apenas uma vez e não poderá ser recuperada pelo sistema.
+          </Text>
+          <TouchableOpacity
+            style={tmpStyles.closeBtn2}
+            onPress={() => { setTempPassword(null); onClose(); }}
+            activeOpacity={0.8}>
+            <Text style={[tmpStyles.closeBtnText, { fontFamily: fontSemiBold }]}>Fechar</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  </>
   );
 }
 
@@ -497,7 +711,17 @@ const styles = StyleSheet.create({
   formContent: { paddingHorizontal: 24, paddingTop: 18, gap: 16, paddingBottom: 8 },
   row: { flexDirection: 'row', gap: 12 },
   errorText: { color: Colors.error, fontSize: 13, textAlign: 'center' },
-  actions: { marginTop: 8, paddingBottom: 12 },
+  actions: { marginTop: 8, paddingBottom: 12, gap: 12 },
+  deleteBtn: {
+    height: 52,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#DC2626',
+    width: '100%',
+    marginTop: 0,
+  },
+  deleteBtnText: { fontSize: 16, color: '#FFFFFF', letterSpacing: -0.32, lineHeight: 24.8 },
 });
 
 const jStyles = StyleSheet.create({
@@ -547,3 +771,17 @@ const jStyles = StyleSheet.create({
   saveBtnText: { fontSize: 14, color: Colors.white },
 });
 
+const tmpStyles = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  card: { backgroundColor: Colors.white, borderRadius: 20, padding: 28, width: '100%', gap: 16, alignItems: 'center' },
+  title: { fontSize: 20, color: Colors.dark },
+  info: { fontSize: 14, color: Colors.grey500, textAlign: 'center', lineHeight: 21 },
+  pwdBox: { backgroundColor: Colors.surface, borderRadius: 12, paddingVertical: 16, paddingHorizontal: 24, borderWidth: 1.5, borderColor: Colors.grey200, width: '100%', alignItems: 'center' },
+  pwdText: { fontSize: 22, color: Colors.dark, letterSpacing: 3 },
+  copyBtn: { width: '100%', paddingVertical: 14, borderRadius: 12, backgroundColor: Colors.gold, alignItems: 'center' },
+  copyBtnDone: { backgroundColor: Colors.success ?? '#4CAF50' },
+  copyBtnText: { fontSize: 15, color: Colors.white },
+  warning: { fontSize: 12, color: Colors.error, textAlign: 'center', lineHeight: 18 },
+  closeBtn2: { width: '100%', paddingVertical: 14, borderRadius: 12, borderWidth: 1.5, borderColor: Colors.grey200, alignItems: 'center' },
+  closeBtnText: { fontSize: 15, color: Colors.grey500 },
+});

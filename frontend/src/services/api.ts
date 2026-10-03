@@ -35,5 +35,5 @@ export const API_BASE_URL = Platform.OS === 'android'
   ? 'http://10.0.2.2:8080'
   : 'http://localhost:8080';
 
-// TODO: substituir pela leitura real do estabelecimento logado (AuthContext)
-export const ESTABLISHMENT_ID = '3fa85f64-5717-4562-b3fc-2c963f66afa6';
+// O establishmentId de desenvolvimento está centralizado em src/constants/establishment.ts
+// (lido de EXPO_PUBLIC_ESTABLISHMENT_ID no .env)

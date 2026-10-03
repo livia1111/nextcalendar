@@ -39,6 +39,9 @@ public class ProfessionalEntity {
 
     private String nickname;
 
+    @Column(length = 100)
+    private String specialty;
+
     @Column(nullable = false, unique = true)
     private String cpf;
 

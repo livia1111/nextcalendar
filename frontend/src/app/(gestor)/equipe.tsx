@@ -23,6 +23,7 @@ import {
   updateProfessionalAsAdmin,
   type ProfessionalAdminUpdateInput,
   type ProfessionalCreateInput,
+  type ProfessionalCreateResponse,
   type ProfessionalMin,
 } from '@/services/professionalServices';
 
@@ -54,7 +55,6 @@ export default function EquipeScreen() {
   // Abertura do Modal para Cadastro (Botão "+ Adicionar")
   function handleOpenCreate() {
     setSelectedProfessional(undefined);
-    setModalMode('create');
     setModalVisible(true);
   }
 
@@ -64,21 +64,21 @@ export default function EquipeScreen() {
     router.push(`/(gestor)/profissional/${profId}` as any);
   }
 
-  // Submissão de novo profissional
-  async function handleCreateProfessional(input: ProfessionalCreateInput) {
+  // Submissão de novo profissional — retorna a resposta para o modal exibir a senha temporária
+  async function handleCreateProfessional(input: ProfessionalCreateInput): Promise<ProfessionalCreateResponse> {
     if (!establishmentId) {
       Alert.alert('Erro', 'Estabelecimento não encontrado. Tente novamente.');
-      return;
+      throw new Error('Estabelecimento não encontrado.');
     }
     try {
-      await createProfessional(establishmentId, input);
-      Alert.alert('Sucesso', `Profissional ${input.name} cadastrado com sucesso!`);
+      const result = await createProfessional(establishmentId, input);
+      // Atualiza a lista em background
       setMode('all');
       setTimeout(() => setMode('active'), 100);
-      setModalVisible(false);
+      // Retorna o resultado — o modal exibirá a senha temporária e fechará sozinho
+      return result;
     } catch (err: any) {
-      Alert.alert('Erro', err?.message || 'Não foi possível cadastrar o profissional.');
-      throw err;
+      throw new Error(err?.response?.data?.message || err?.message || 'Não foi possível cadastrar o profissional.');
     }
   }
 

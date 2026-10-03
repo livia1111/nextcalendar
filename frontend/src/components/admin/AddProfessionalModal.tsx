@@ -1,8 +1,9 @@
-﻿import { isAxiosError } from 'axios';
+import { isAxiosError } from 'axios';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Clipboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -21,6 +22,7 @@ import { useAppFonts } from '@/hooks/use-fonts';
 import {
   type ProfessionalAdminUpdateInput,
   type ProfessionalCreateInput,
+  type ProfessionalCreateResponse,
   type ProfessionalMin,
 } from '@/services/professionalServices';
 import {
@@ -224,7 +226,7 @@ function JornadaTab({ establishmentId, professionalId, fontRegular, fontSemiBold
 interface AddProfessionalModalProps {
   visible: boolean;
   onClose: () => void;
-  onSubmit: (data: ProfessionalCreateInput) => Promise<void>;
+  onSubmit?: (data: ProfessionalCreateInput) => Promise<ProfessionalCreateResponse | void>;
   mode?: 'create' | 'edit';
   professional?: ProfessionalMin;
   establishmentId?: string;
@@ -248,6 +250,10 @@ export function AddProfessionalModal({
   const [error, setError] = useState('');
   const prevVisible = useRef(false);
 
+  // Estado para o modal de senha temporária
+  const [tempPassword, setTempPassword] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
   useEffect(() => {
     if (visible && !prevVisible.current) {
       if (isEdit && professional) {
@@ -268,8 +274,25 @@ export function AddProfessionalModal({
     if (!phone.trim()) { setError('Informe um telefone de contato.'); return; }
     setError(''); setSubmitting(true);
     try {
-      await onSubmit({ name: name.trim(), nickname: nickname.trim() || undefined, specialty: specialty.trim() || 'Profissional', cpf: cpf.replace(/\D/g, '') || '000.000.000-00', phone: phone.trim(), email: email.trim(), password: 'TempPassword123!', commission: Number(commission) || 50 });
-      resetForm(); onClose();
+      if (!onSubmit) return;
+      // Não enviamos senha — o backend gera automaticamente
+      const result = await onSubmit({
+        name: name.trim(),
+        nickname: nickname.trim() || undefined,
+        specialty: specialty.trim() || 'Profissional',
+        cpf: cpf.replace(/\D/g, '') || '000.000.000-00',
+        phone: phone.trim(),
+        email: email.trim(),
+        commission: Number(commission) || 50,
+      });
+      resetForm();
+      // Exibe a senha temporária — não chamamos onClose aqui para o modal de senha aparecer
+      if (result && 'temporaryPassword' in result && result.temporaryPassword) {
+        setTempPassword(result.temporaryPassword);
+        setCopied(false);
+      } else {
+        onClose();
+      }
     } catch (err: any) { setError(err?.message || 'Nao foi possivel cadastrar o profissional.'); }
     finally { setSubmitting(false); }
   }
@@ -285,6 +308,7 @@ export function AddProfessionalModal({
   }
 
   return (
+    <>
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.overlay}>
         <View style={styles.sheet}>
@@ -336,6 +360,49 @@ export function AddProfessionalModal({
         </View>
       </KeyboardAvoidingView>
     </Modal>
+
+    {/* ─── Modal de Senha Temporária ─────────────────────────────────────────
+        Aparece logo após a criação bem-sucedida. A senha só é exibida aqui,
+        nunca é salva em estado persistente nem logada.
+    */}
+    <Modal visible={!!tempPassword} transparent animationType="fade">
+      <View style={tmpStyles.overlay}>
+        <View style={tmpStyles.card}>
+          <Text style={[tmpStyles.title, { fontFamily: fontSemiBold }]}>
+            🔑 Senha Temporária
+          </Text>
+          <Text style={[tmpStyles.info, { fontFamily: fontRegular }]}>
+            Compartilhe esta senha com o profissional. Ele será obrigado a trocá-la no primeiro acesso.
+          </Text>
+          <View style={tmpStyles.pwdBox}>
+            <Text style={[tmpStyles.pwdText, { fontFamily: fontSemiBold }]} selectable>
+              {tempPassword}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[tmpStyles.copyBtn, copied && tmpStyles.copyBtnDone]}
+            onPress={() => {
+              Clipboard.setString(tempPassword ?? '');
+              setCopied(true);
+            }}
+            activeOpacity={0.8}>
+            <Text style={[tmpStyles.copyBtnText, { fontFamily: fontSemiBold }]}>
+              {copied ? '✓ Copiado!' : 'Copiar senha'}
+            </Text>
+          </TouchableOpacity>
+          <Text style={[tmpStyles.warning, { fontFamily: fontRegular }]}>
+            ⚠️ Esta senha aparece apenas uma vez e não poderá ser recuperada pelo sistema.
+          </Text>
+          <TouchableOpacity
+            style={tmpStyles.closeBtn2}
+            onPress={() => { setTempPassword(null); onClose(); }}
+            activeOpacity={0.8}>
+            <Text style={[tmpStyles.closeBtnText, { fontFamily: fontSemiBold }]}>Fechar</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  </>
   );
 }
 
@@ -392,4 +459,19 @@ const jStyles = StyleSheet.create({
   cancelBtnText: { fontSize: 14, color: Colors.grey500 },
   saveBtn: { flex: 1, paddingVertical: 12, borderRadius: 10, alignItems: 'center', backgroundColor: Colors.gold },
   saveBtnText: { fontSize: 14, color: Colors.white },
+});
+
+const tmpStyles = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  card: { backgroundColor: Colors.white, borderRadius: 20, padding: 28, width: '100%', gap: 16, alignItems: 'center' },
+  title: { fontSize: 20, color: Colors.dark },
+  info: { fontSize: 14, color: Colors.grey500, textAlign: 'center', lineHeight: 21 },
+  pwdBox: { backgroundColor: Colors.surface, borderRadius: 12, paddingVertical: 16, paddingHorizontal: 24, borderWidth: 1.5, borderColor: Colors.grey200, width: '100%', alignItems: 'center' },
+  pwdText: { fontSize: 22, color: Colors.dark, letterSpacing: 3 },
+  copyBtn: { width: '100%', paddingVertical: 14, borderRadius: 12, backgroundColor: Colors.gold, alignItems: 'center' },
+  copyBtnDone: { backgroundColor: Colors.success ?? '#4CAF50' },
+  copyBtnText: { fontSize: 15, color: Colors.white },
+  warning: { fontSize: 12, color: Colors.error, textAlign: 'center', lineHeight: 18 },
+  closeBtn2: { width: '100%', paddingVertical: 14, borderRadius: 12, borderWidth: 1.5, borderColor: Colors.grey200, alignItems: 'center' },
+  closeBtnText: { fontSize: 15, color: Colors.grey500 },
 });

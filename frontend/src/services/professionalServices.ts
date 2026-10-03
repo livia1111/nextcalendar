@@ -1,4 +1,3 @@
-import { size } from 'zod';
 import api from './api';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -20,12 +19,16 @@ export type ProfessionalCreateInput = {
   nickname?: string;
   cpf: string;
   email: string;
-  password?: string;
   phone: string;
   gender?: string;
   photoUrl?: string;
   specialty?: string;
   commission?: number;
+};
+
+/** Resposta de criação — inclui temporaryPassword (só neste endpoint). */
+export type ProfessionalCreateResponse = ProfessionalMin & {
+  temporaryPassword: string;
 };
 
 export type PageResponse<T> = {
@@ -56,8 +59,8 @@ export async function getActiveProfessionals(
 export async function createProfessional(
   establishmentId: string,
   input: ProfessionalCreateInput
-): Promise<ProfessionalMin> {
-  const { data } = await api.post<ProfessionalMin>(
+): Promise<ProfessionalCreateResponse> {
+  const { data } = await api.post<ProfessionalCreateResponse>(
     `/establishments/${establishmentId}/professionals`,
     input
   );
@@ -109,7 +112,7 @@ export async function searchProfessionals(
 // Atualizar próprio perfil
 
 export type ProfessionalUpdateInput = Partial<
-  Omit<ProfessionalCreateInput, 'cpf' | 'password'>
+  Omit<ProfessionalCreateInput, 'cpf'>
 >;
 
 export async function updateProfessional(

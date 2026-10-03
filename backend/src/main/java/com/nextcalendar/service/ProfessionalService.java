@@ -17,6 +17,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.util.UUID;
 
 @Service
@@ -51,6 +52,21 @@ public class ProfessionalService {
                 .orElseThrow(() -> new EntityNotFoundException("Profissional", id));
     }
 
+    // ─── Alfabeto seguro: sem 0/O (ambíguo) e 1/l (ambíguo) ─────────────────
+    private static final String TEMP_PWD_ALPHABET =
+            "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789";
+    private static final int TEMP_PWD_LENGTH = 10;
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
+    /** Gera uma senha temporária de {@value TEMP_PWD_LENGTH} caracteres com SecureRandom. */
+    private String generateTemporaryPassword() {
+        StringBuilder sb = new StringBuilder(TEMP_PWD_LENGTH);
+        for (int i = 0; i < TEMP_PWD_LENGTH; i++) {
+            sb.append(TEMP_PWD_ALPHABET.charAt(SECURE_RANDOM.nextInt(TEMP_PWD_ALPHABET.length())));
+        }
+        return sb.toString();
+    }
+
     @Transactional
     public ProfessionalProfileResponseDTO createProfessional(UUID establishmentId, ProfessionalCreateDTO dto) {
 
@@ -64,12 +80,16 @@ public class ProfessionalService {
 
         EstablishmentEntity establishment = findEstablishment(establishmentId);
 
+        // Gera senha temporária — o hash vai para o banco, o texto puro volta só na resposta
+        String temporaryPassword = generateTemporaryPassword();
+
         UserEntity user = new UserEntity();
         user.setName(dto.name());
         user.setEmail(dto.email());
-        user.setPasswordHash(passwordEncoder.encode(dto.password()));
+        user.setPasswordHash(passwordEncoder.encode(temporaryPassword));
         user.setRole(UserRole.PROFESSIONAL);
         user.setActive(true);
+        user.setMustChangePassword(true);   // força troca no primeiro login
 
         UserEntity savedUser = userRepository.save(user);
 
@@ -78,7 +98,18 @@ public class ProfessionalService {
 
         ProfessionalEntity savedProfessional = professionalRepository.save(professional);
 
-        return new ProfessionalProfileResponseDTO(savedProfessional);
+        // Devolve a senha temporária em texto puro SOMENTE aqui — nunca em GET
+        return new ProfessionalProfileResponseDTO(
+                savedProfessional.getName(),
+                savedProfessional.getNickname(),
+                savedProfessional.getCpf(),
+                savedProfessional.getEmail(),
+                savedProfessional.getPhone(),
+                savedProfessional.getGender(),
+                savedProfessional.getPhotoUrl(),
+                savedProfessional.getCommission(),
+                temporaryPassword
+        );
     }
 
     @Transactional

@@ -47,3 +47,25 @@ export const RegisterEmpresaSchema = z.object({
 export type LoginInput =  z.infer<typeof LoginSchema>;
 export type RegisterInput = z.infer<typeof RegisterSchema>;
 export type RegisterEmpresaInput = z.infer<typeof RegisterEmpresaSchema>;
+
+/** Schema de troca de senha — usado na tela trocar-senha.tsx */
+export const ChangePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, 'Informe a senha atual.'),
+    newPassword: z
+      .string()
+      .min(8, 'A nova senha deve ter no mínimo 8 caracteres.')
+      .refine(val => /[a-zA-Z]/.test(val), 'A nova senha deve conter ao menos uma letra.')
+      .refine(val => /[0-9]/.test(val), 'A nova senha deve conter ao menos um número.'),
+    confirmPassword: z.string().min(1, 'Confirme a nova senha.'),
+  })
+  .refine(data => data.newPassword === data.confirmPassword, {
+    message: 'A nova senha e a confirmação não coincidem.',
+    path: ['confirmPassword'],
+  })
+  .refine(data => data.newPassword !== data.currentPassword, {
+    message: 'A nova senha não pode ser igual à senha atual.',
+    path: ['newPassword'],
+  });
+
+export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;

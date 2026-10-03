@@ -160,6 +160,12 @@ public class AuthService {
             throw new BusinessException("A nova senha deve ter no mínimo 8 caracteres.");
         }
 
+        boolean hasLetter = dto.newPassword().chars().anyMatch(Character::isLetter);
+        boolean hasDigit  = dto.newPassword().chars().anyMatch(Character::isDigit);
+        if (!hasLetter || !hasDigit) {
+            throw new BusinessException("A nova senha deve conter ao menos uma letra e um número.");
+        }
+
         if (passwordEncoder.matches(dto.newPassword(), user.getPasswordHash())) {
             throw new BusinessException("A nova senha não pode ser igual à senha atual.");
         }

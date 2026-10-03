@@ -73,7 +73,7 @@ export default function AgendaDoProfissionalScreen() {
     let active = true;
     async function load() {
       setLoading(true);
-      const data = await getAgendaByDate(formatDateKey(selectedDate), token);
+      const data = await getAgendaByDate(formatDateKey(selectedDate), token || undefined);
       if (active) setSlots(data);
       setLoading(false);
     }
@@ -288,7 +288,7 @@ export default function AgendaDoProfissionalScreen() {
                   label="Reagendar"
                   onPress={() => {
                     setQuickActionSlot(null);
-                    router.push('/booking');
+                    router.push('/booking' as any);
                   }}
                   font={fontSemiBold}
                 />

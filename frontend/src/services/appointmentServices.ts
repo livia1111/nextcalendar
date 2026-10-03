@@ -172,3 +172,21 @@ export async function getAvailableSlots(
   return data;
 }
 
+// ─── GET /api/v1/professionals/me/appointments ────────────────────────────────
+
+export type GetMyAppointmentsParams = {
+  date?: string;
+  from?: string;
+  to?: string;
+};
+
+export async function getMyAppointments(
+  params?: GetMyAppointmentsParams
+): Promise<Appointment[]> {
+  const { data } = await api.get<Appointment[]>('/professionals/me/appointments', {
+    params,
+  });
+  return data;
+}
+
+

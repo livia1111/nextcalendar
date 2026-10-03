@@ -154,3 +154,30 @@ export async function deactivateProfessional(
 ): Promise<void> {
   await api.delete(`/establishments/${establishmentId}/professionals/${id}`);
 }
+
+// ─── GET /api/v1/professionals/me ─────────────────────────────────────────────
+
+export type ProfessionalMe = {
+  id: string;
+  name: string;
+  nickname?: string;
+  cpf: string;
+  email: string;
+  phone: string;
+  gender?: string;
+  photoUrl?: string | null;
+  commission?: number;
+  active: boolean;
+  establishmentId: string;
+  establishmentName: string;
+};
+
+export async function getProfessionalMe(): Promise<ProfessionalMe> {
+  const { data } = await api.get<ProfessionalMe>('/professionals/me');
+  return data;
+}
+
+export async function getProfessionalByUserId(userId: string): Promise<ProfessionalMe> {
+  const { data } = await api.get<ProfessionalMe>(`/professionals/by-user/${userId}`);
+  return data;
+}

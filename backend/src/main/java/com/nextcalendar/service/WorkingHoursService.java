@@ -43,7 +43,11 @@ public class WorkingHoursService {
 
     @Transactional
     public WorkingHoursResponseDTO create(UUID establishmentId, UUID professionalId, WorkingHoursCreateDTO dto) {
-
+        com.nextcalendar.config.SecurityUtils.getAuthenticatedUser().ifPresent(u -> {
+            if (u.getRole() == com.nextcalendar.entity.UserRole.PROFESSIONAL) {
+                throw new org.springframework.security.access.AccessDeniedException("Profissionais não têm permissão para definir horários de trabalho.");
+            }
+        });
         ProfessionalEntity professional = findProfessional(establishmentId, professionalId);
 
         if (workingHoursRepository.existsByProfessionalIdAndDayOfWeek(professionalId, dto.dayOfWeek())) {
@@ -63,6 +67,11 @@ public class WorkingHoursService {
 
     @Transactional
     public WorkingHoursResponseDTO update(UUID establishmentId, UUID professionalId, UUID id, WorkingHoursUpdateDTO dto) {
+        com.nextcalendar.config.SecurityUtils.getAuthenticatedUser().ifPresent(u -> {
+            if (u.getRole() == com.nextcalendar.entity.UserRole.PROFESSIONAL) {
+                throw new org.springframework.security.access.AccessDeniedException("Profissionais não têm permissão para alterar horários de trabalho.");
+            }
+        });
 
         findProfessional(establishmentId, professionalId);
         WorkingHoursEntity entity = findWorkingHours(id);
@@ -91,6 +100,11 @@ public class WorkingHoursService {
 
     @Transactional
     public void delete(UUID id) {
+        com.nextcalendar.config.SecurityUtils.getAuthenticatedUser().ifPresent(u -> {
+            if (u.getRole() == com.nextcalendar.entity.UserRole.PROFESSIONAL) {
+                throw new org.springframework.security.access.AccessDeniedException("Profissionais não têm permissão para excluir horários de trabalho.");
+            }
+        });
         WorkingHoursEntity entity = findWorkingHours(id);
         workingHoursRepository.delete(entity);
     }

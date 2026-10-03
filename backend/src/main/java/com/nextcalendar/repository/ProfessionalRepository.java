@@ -12,6 +12,8 @@ public interface ProfessionalRepository extends JpaRepository<ProfessionalEntity
 
     Optional<ProfessionalEntity> findByIdAndEstablishmentId(UUID id, UUID establishmentId);
 
+    Optional<ProfessionalEntity> findByUserId(UUID userId);
+
     Page<ProfessionalEntity> findByEstablishmentId(UUID establishmentId, Pageable pageable);
 
     Page<ProfessionalEntity> findByEstablishmentIdAndActiveTrue(UUID establishmentId, Pageable pageable);

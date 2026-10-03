@@ -33,6 +33,8 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         MustChangePasswordFilter mustChangePasswordFilter =
                 new MustChangePasswordFilter(jwtService, userRepository, objectMapper);
+        JwtAuthenticationFilter jwtAuthFilter =
+                new JwtAuthenticationFilter(jwtService, userRepository);
 
         http
                 .cors(org.springframework.security.config.Customizer.withDefaults())
@@ -48,10 +50,10 @@ public class SecurityConfig {
                                 "/swagger-ui/**",    // Swagger UI
                                 "/v3/api-docs/**"    // OpenAPI docs
                         ).permitAll()
-                        // Todas as outras requerem autenticação
-                        // (por enquanto, permitAll temporário até o filtro JWT estar completo)
+                        // Todas as outras liberadas para validação granular por filtros e services
                         .anyRequest().permitAll()
                 )
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(mustChangePasswordFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

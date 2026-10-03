@@ -67,8 +67,28 @@ public class ProfessionalService {
         return sb.toString();
     }
 
+    @Transactional(readOnly = true)
+    public ProfessionalMeResponseDTO getMe() {
+        com.nextcalendar.entity.UserEntity user = com.nextcalendar.config.SecurityUtils.getRequiredAuthenticatedUser();
+        ProfessionalEntity professional = professionalRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new EntityNotFoundException("Profissional não encontrado para o usuário logado.", user.getId()));
+        return new ProfessionalMeResponseDTO(professional);
+    }
+
+    @Transactional(readOnly = true)
+    public ProfessionalMeResponseDTO findByUserId(UUID userId) {
+        ProfessionalEntity professional = professionalRepository.findByUserId(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Profissional não encontrado para o usuário.", userId));
+        return new ProfessionalMeResponseDTO(professional);
+    }
+
     @Transactional
     public ProfessionalProfileResponseDTO createProfessional(UUID establishmentId, ProfessionalCreateDTO dto) {
+        com.nextcalendar.config.SecurityUtils.getAuthenticatedUser().ifPresent(u -> {
+            if (u.getRole() == UserRole.PROFESSIONAL) {
+                throw new org.springframework.security.access.AccessDeniedException("Profissionais não têm permissão para cadastrar novos profissionais.");
+            }
+        });
 
         if (userRepository.existsByEmail(dto.email()) || professionalRepository.existsByEmail(dto.email())) {
             throw new BusinessException("O e-mail '" + dto.email() + "' já está cadastrado no sistema.");
@@ -114,6 +134,11 @@ public class ProfessionalService {
 
     @Transactional
     public ProfessionalDetailsResponseDTO updateProfessionalByAdmin(UUID id, ProfessionalAdminUpdateDTO dto) {
+        com.nextcalendar.config.SecurityUtils.getAuthenticatedUser().ifPresent(u -> {
+            if (u.getRole() == UserRole.PROFESSIONAL) {
+                throw new org.springframework.security.access.AccessDeniedException("Profissionais não têm permissão para editar outros profissionais.");
+            }
+        });
 
         ProfessionalEntity professional = findProfessional(id);
 
@@ -230,6 +255,11 @@ public class ProfessionalService {
 
     @Transactional
     public void deleteProfessional(UUID id) {
+        com.nextcalendar.config.SecurityUtils.getAuthenticatedUser().ifPresent(u -> {
+            if (u.getRole() == UserRole.PROFESSIONAL) {
+                throw new org.springframework.security.access.AccessDeniedException("Profissionais não têm permissão para desativar profissionais.");
+            }
+        });
         ProfessionalEntity professional = findProfessional(id);
 
         professional.setActive(false);

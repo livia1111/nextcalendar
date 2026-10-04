@@ -165,7 +165,7 @@ export default function ProfissionalHomeScreen() {
 
   // ─── Métricas do cabeçalho ─────────────────────────────────────────────────
   const activeAppointments = appointments.filter((a) => a.status !== 'CANCELLED');
-  const completedAppointments = appointments.filter((a) => a.status === 'COMPLETED');
+  const DONEAppointments = appointments.filter((a) => a.status === 'DONE');
   const scheduledList = appointments
     .filter((a) => a.status === 'SCHEDULED')
     .sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime());
@@ -203,7 +203,7 @@ export default function ProfissionalHomeScreen() {
     switch (status) {
       case 'SCHEDULED':
         return { label: 'Confirmado', bg: '#E8F8EE', color: '#1B873F', border: '#C2ECCF' };
-      case 'COMPLETED':
+      case 'DONE':
         return { label: 'Concluído', bg: '#EDF4FC', color: '#1E64B4', border: '#BFDBFE' };
       case 'CANCELLED':
         return { label: 'Cancelado', bg: '#FEECEC', color: '#DC2626', border: '#FECACA' };
@@ -241,7 +241,7 @@ export default function ProfissionalHomeScreen() {
           establishmentName={professional?.establishmentName || 'Minha Barbearia'}
           professionalName={professional?.nickname || professional?.name || 'Profissional'}
           totalAppointments={activeAppointments.length}
-          completedAppointments={completedAppointments.length}
+          DONEAppointments={DONEAppointments.length}
           nextAppointmentTime={nextAppointmentTime}
           onSignOut={signOut}
         />

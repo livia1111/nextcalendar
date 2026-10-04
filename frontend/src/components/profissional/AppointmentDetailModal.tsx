@@ -13,6 +13,7 @@ import { useAppFonts } from '@/hooks/use-fonts';
 import { type Appointment, cancelAppointment } from '@/services/appointmentServices';
 import { ClockIcon } from '@/components/icons';
 import { isAxiosError } from 'axios';
+import { useRouter } from 'expo-router';
 
 interface AppointmentDetailModalProps {
   visible: boolean;
@@ -32,6 +33,7 @@ export function AppointmentDetailModal({
   onOpenReschedule,
 }: AppointmentDetailModalProps) {
   const { fontRegular, fontSemiBold, fontBold } = useAppFonts();
+    const router = useRouter();
   const [cancelling, setCancelling] = useState(false);
 
   if (!appointment) return null;
@@ -54,7 +56,7 @@ export function AppointmentDetailModal({
     switch (status) {
       case 'SCHEDULED':
         return { label: 'Confirmado', color: '#1B873F', bg: '#E8F8EE' };
-      case 'COMPLETED':
+      case 'DONE':
         return { label: 'Concluído', color: '#1E64B4', bg: '#EDF4FC' };
       case 'CANCELLED':
         return { label: 'Cancelado', color: '#DC2626', bg: '#FEECEC' };
@@ -67,6 +69,16 @@ export function AppointmentDetailModal({
 
   const statusInfo = getStatusLabel(appointment.status);
   const canModify = appointment.status === 'SCHEDULED';
+
+   const canOpenOrder = appointment.status !== 'CANCELLED' && appointment.status !== 'NO_SHOW';
+
+  function handleOpenOrder() {
+    onClose();
+    router.push({
+      pathname: '/comanda',
+      params: { appointmentId: appointment!.id, establishmentId },
+    } as any);
+  }
 
   function handleCancelConfirm() {
     Alert.alert(
@@ -176,6 +188,18 @@ export function AppointmentDetailModal({
 
           {/* Footer Actions */}
           <View style={styles.footer}>
+              {canOpenOrder ? (
+              <TouchableOpacity
+                style={[styles.actionBtn, styles.rescheduleBtn]}
+                activeOpacity={0.8}
+                onPress={handleOpenOrder}>
+                <Text style={[styles.rescheduleText, { fontFamily: fontSemiBold }]}>
+                  {appointment.status === 'DONE' ? 'Ver Comanda' : 'Abrir Comanda'}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+
+
             {canModify ? (
               <>
                 <TouchableOpacity

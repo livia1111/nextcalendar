@@ -121,7 +121,7 @@ export default function HomeEmpresaScreen() {
     const statusLabel =
       appt.status === 'SCHEDULED'
         ? 'Confirmado'
-        : appt.status === 'COMPLETED'
+        : appt.status === 'DONE'
         ? 'Concluído'
         : appt.status === 'CANCELLED'
         ? 'Cancelado'

@@ -44,7 +44,7 @@ export function ProfessionalTimeline({
     switch (status) {
       case 'SCHEDULED':
         return { label: 'Confirmado', bg: '#E8F8EE', color: '#1B873F', border: '#C2ECCF' };
-      case 'COMPLETED':
+      case 'DONE':
         return { label: 'Concluído', bg: '#EDF4FC', color: '#1E64B4', border: '#BFDBFE' };
       case 'CANCELLED':
         return { label: 'Cancelado', bg: '#FEECEC', color: '#DC2626', border: '#FECACA' };

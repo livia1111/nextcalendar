@@ -62,6 +62,14 @@ export default function PerfilScreen() {
           </Text>
         </TouchableOpacity>
 
+         <TouchableOpacity
+          style={styles.optionRow}
+          activeOpacity={0.7}
+          onPress={() => router.push('/produtos' as any)}>
+          <SettingsIcon size={18} color={Colors.dark} />
+          <Text style={[styles.optionText, { fontFamily: fontSemiBold }]}>Produtos</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.signOutBtn} activeOpacity={0.7} onPress={signOut}>
           <Text style={[styles.signOutText, { fontFamily: fontSemiBold }]}>Sair</Text>
         </TouchableOpacity>

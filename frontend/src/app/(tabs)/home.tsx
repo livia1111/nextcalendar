@@ -55,7 +55,7 @@ function formatAppointmentToBooking(appt: Appointment): Booking {
     address: 'Próximo atendimento',
     services: appt.serviceName || 'Serviço',
     price: appt.servicePrice != null ? `R$ ${appt.servicePrice.toFixed(2)}` : 'R$ 0,00',
-    status: appt.status === 'COMPLETED' ? 'done' : appt.status === 'CANCELLED' ? 'cancelled' : 'upcoming',
+    status: appt.status === 'DONE' ? 'done' : appt.status === 'CANCELLED' ? 'cancelled' : 'upcoming',
   };
 }
 
@@ -71,7 +71,7 @@ export default function HomeScreen() {
 
   // ── Estado: Agendamentos ─────────────────────────────────────────────────
   const [upcomingBookings, setUpcomingBookings] = useState<Booking[]>([]);
-  const [completedBookingsCount, setCompletedBookingsCount] = useState(0);
+  const [DONEBookingsCount, setDONEBookingsCount] = useState(0);
 
   // ── Estado: Serviços do Tenant ───────────────────────────────────────────
   const [services, setServices] = useState<ServiceResponse[]>([]);
@@ -127,13 +127,13 @@ const loadHomeData = useCallback(async () => {
         setUpcomingBookings(upcoming);
 
         // Conta os concluídos
-        setCompletedBookingsCount(
-          appointments.filter((a) => a.status === 'COMPLETED').length
+        setDONEBookingsCount(
+          appointments.filter((a) => a.status === 'DONE').length
         );
       } else {
         // null = usuário autenticado sem perfil de cliente (ex: gestor)
         setUpcomingBookings([]);
-        setCompletedBookingsCount(0);
+        setDONEBookingsCount(0);
       }
     } catch (error: any) {
       // Loga detalhes úteis para diagnóstico: status HTTP e URL da requisição
@@ -145,11 +145,11 @@ const loadHomeData = useCallback(async () => {
       );
 
       setUpcomingBookings([]);
-      setCompletedBookingsCount(0);
+      setDONEBookingsCount(0);
     }
   } else {
     setUpcomingBookings([]);
-    setCompletedBookingsCount(0);
+    setDONEBookingsCount(0);
   }
 
   // 2. Serviços cadastrados no estabelecimento

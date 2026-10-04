@@ -76,7 +76,7 @@ function formatAppointmentToBooking(appt: Appointment): Booking {
   const computedStatus: Booking['status'] =
     appt.status === 'CANCELLED'
       ? 'cancelled'
-      : isPast || appt.status === 'COMPLETED'
+      : isPast || appt.status === 'DONE'
       ? 'done'
       : 'upcoming';
 

@@ -5,9 +5,11 @@ import api from './api';
 /** Status possíveis de um agendamento retornados pelo backend. */
 export type AppointmentStatus =
   | 'SCHEDULED'
-  | 'COMPLETED'
-  | 'CANCELLED'
-  | 'NO_SHOW';
+  | 'CONFIRMED'
+  | 'IN_PROGRESS'
+  | 'DONE'
+  | 'NO_SHOW'
+  | 'CANCELLED';
 
 /** Shape completo de um agendamento — usado em todas as respostas deste módulo. */
 export type Appointment = {

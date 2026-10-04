@@ -9,7 +9,7 @@ interface ProfissionalHeaderProps {
   establishmentName: string;
   professionalName: string;
   totalAppointments: number;
-  completedAppointments: number;
+  DONEAppointments: number;
   nextAppointmentTime?: string;
   onSignOut?: () => void;
 }
@@ -18,7 +18,7 @@ export function ProfissionalHeader({
   establishmentName,
   professionalName,
   totalAppointments,
-  completedAppointments,
+  DONEAppointments,
   nextAppointmentTime = '--:--',
   onSignOut,
 }: ProfissionalHeaderProps) {
@@ -67,7 +67,7 @@ export function ProfissionalHeader({
         <View style={styles.metricDivider} />
 
         <View style={styles.metricCard}>
-          <Text style={[styles.metricNumber, { fontFamily: fontSemiBold }]}>{completedAppointments}</Text>
+          <Text style={[styles.metricNumber, { fontFamily: fontSemiBold }]}>{DONEAppointments}</Text>
           <Text style={[styles.metricLabel, { fontFamily: fontRegular }]}>Concluídos</Text>
         </View>
 

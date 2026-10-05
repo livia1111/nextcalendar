@@ -80,6 +80,10 @@ export default function GestorTabLayout() {
         name="atendimento"
         options={{ href: null, tabBarStyle: { display: 'none' } }}
       />
+      <Tabs.Screen
+        name="atendimentos"
+        options={{ href: null, tabBarStyle: { display: 'none' } }}
+      />
     </Tabs>
   );
 }

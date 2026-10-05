@@ -1,6 +1,6 @@
 import { Redirect, Tabs, useSegments } from 'expo-router';
 import { ColorValue, StyleSheet } from 'react-native';
-import { CalendarTabIcon, ClockIcon, UserTabIcon } from '@/components/icons';
+import { AttendanceTabIcon, CalendarTabIcon, ClockIcon, UserTabIcon } from '@/components/icons';
 import { Colors } from '@/constants/colors';
 import { useAuth } from '@/context/AuthContext';
 import { getRoleHomeRoute } from '@/utils/roleHomeRoute';
@@ -16,6 +16,9 @@ function AgendaIcon({ focused }: TabBarIconProps) {
 }
 function BloqueiosIcon({ focused }: TabBarIconProps) {
   return <ClockIcon color={focused ? Colors.gold : Colors.grey400} />;
+}
+function AtendimentosIcon({ focused }: TabBarIconProps) {
+  return <AttendanceTabIcon color={focused ? Colors.gold : Colors.grey400} />;
 }
 function PerfilIcon({ focused }: TabBarIconProps) {
   return <UserTabIcon color={focused ? Colors.gold : Colors.grey400} />;
@@ -59,6 +62,10 @@ export default function ProfissionalLayout() {
       <Tabs.Screen
         name="home"
         options={{ title: 'Agenda', tabBarIcon: AgendaIcon }}
+      />
+      <Tabs.Screen
+        name="atendimentos"
+        options={{ title: 'Atendimentos', tabBarIcon: AtendimentosIcon }}
       />
       <Tabs.Screen
         name="bloqueios"

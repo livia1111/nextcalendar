@@ -23,6 +23,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeftIcon } from '@/components/icons';
 import { TrashIcon } from '@/components/comanda/ComandaIcons';
 import { ItemPickerModal, type PickerItem } from '@/components/comanda/ItemPickerModal';
+import { PhotoCaptureModal } from '@/components/profissional/PhotoCaptureModal';
 import { Colors } from '@/constants/colors';
 import { DEFAULT_ESTABLISHMENT_ID } from '@/constants/establishment';
 import { useAuth } from '@/context/AuthContext';
@@ -85,6 +86,7 @@ export default function ComandaScreen() {
   const [pickerItems, setPickerItems] = useState<PickerItem[]>([]);
   const [pickerLoading, setPickerLoading] = useState(false);
   const [confirmFinish, setConfirmFinish] = useState(false);
+  const [showPhotoCapture, setShowPhotoCapture] = useState(false);
 
   const isClosed = order?.status === 'CLOSED';
 
@@ -289,7 +291,12 @@ export default function ComandaScreen() {
         <Text style={[styles.headerTitle, { fontFamily: fontSemiBold }]}>
           Comanda {isClosed ? '• Concluída' : ''}
         </Text>
-        <View style={styles.headerBtn} />
+        <TouchableOpacity
+          style={styles.headerPhotoBtn}
+          activeOpacity={0.8}
+          onPress={() => setShowPhotoCapture(true)}>
+          <Text style={[styles.headerPhotoBtnText, { fontFamily: fontSemiBold }]}>📸 Foto</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -547,6 +554,17 @@ export default function ComandaScreen() {
           </View>
         </View>
       </Modal>
+      {/* Modal Captura de Foto */}
+      {order ? (
+        <PhotoCaptureModal
+          visible={showPhotoCapture}
+          appointmentId={order.appointmentId}
+          onClose={() => setShowPhotoCapture(false)}
+          onPhotoSaved={() => {
+            Alert.alert('Foto Registrada!', 'A foto foi anexada com sucesso a este atendimento.');
+          }}
+        />
+      ) : null}
     </KeyboardAvoidingView>
   );
 }
@@ -570,6 +588,18 @@ const styles = StyleSheet.create({
   },
   headerBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 17, color: Colors.dark },
+  headerPhotoBtn: {
+    backgroundColor: 'rgba(202, 160, 82, 0.14)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.gold,
+  },
+  headerPhotoBtnText: {
+    color: Colors.goldDark,
+    fontSize: 12,
+  },
 
   content: { padding: 20, gap: 14 },
 

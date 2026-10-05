@@ -3,7 +3,7 @@ import { USE_MOCK_COMANDA } from '../constants/mocks';
 import { listarServicos } from './serviceServices';
 import { listProducts } from './produtoServices';
 
-export type OrderStatus = 'OPEN' | 'CLOSED';
+export type OrderStatus = 'OPEN' | 'CLOSED' | 'CANCELLED';
 export type OrderItemType = 'SERVICE' | 'PRODUCT';
 export type PaymentMethod = 'CASH' | 'CREDIT_CARD' | 'DEBIT_CARD' | 'PIX';
 

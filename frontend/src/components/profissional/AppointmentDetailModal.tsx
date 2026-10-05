@@ -75,7 +75,15 @@ export function AppointmentDetailModal({
   function handleOpenOrder() {
     onClose();
     router.push({
-      pathname: '/comanda',
+      pathname: '/(profissional)/comanda',
+      params: { appointmentId: appointment!.id, establishmentId },
+    } as any);
+  }
+
+  function handleOpenAtendimento() {
+    onClose();
+    router.push({
+      pathname: '/(profissional)/atendimento',
       params: { appointmentId: appointment!.id, establishmentId },
     } as any);
   }
@@ -189,15 +197,26 @@ export function AppointmentDetailModal({
           {/* Footer Actions */}
           <View style={styles.footer}>
               {canOpenOrder ? (
-              <TouchableOpacity
-                style={[styles.actionBtn, styles.rescheduleBtn]}
-                activeOpacity={0.8}
-                onPress={handleOpenOrder}>
-                <Text style={[styles.rescheduleText, { fontFamily: fontSemiBold }]}>
-                  {appointment.status === 'DONE' ? 'Ver Comanda' : 'Abrir Comanda'}
-                </Text>
-              </TouchableOpacity>
-            ) : null}
+                <TouchableOpacity
+                  style={[styles.actionBtn, styles.rescheduleBtn]}
+                  activeOpacity={0.8}
+                  onPress={handleOpenOrder}>
+                  <Text style={[styles.rescheduleText, { fontFamily: fontSemiBold }]}>
+                    {appointment.status === 'DONE' ? 'Ver Comanda' : 'Iniciar Atendimento'}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+
+              {appointment.status === 'DONE' ? (
+                <TouchableOpacity
+                  style={[styles.actionBtn, styles.rescheduleBtn]}
+                  activeOpacity={0.8}
+                  onPress={handleOpenAtendimento}>
+                  <Text style={[styles.rescheduleText, { fontFamily: fontSemiBold }]}>
+                    Ficha & Fotos
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
 
 
             {canModify ? (

@@ -135,27 +135,64 @@ export default function ProfissionalPerfilScreen() {
               </View>
             </View>
 
-            {/* Segurança */}
-            <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { fontFamily: fontSemiBold }]}>
-                Segurança
-              </Text>
+              {/* Atendimentos & Clientes */}
+              <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { fontFamily: fontSemiBold }]}>
+                  Atendimentos & Clientes
+                </Text>
 
-              <TouchableOpacity
-                style={styles.menuItem}
-                activeOpacity={0.8}
-                onPress={() => router.push('/(profissional)/trocar-senha' as any)}>
-                <View style={styles.menuLeft}>
-                  <Text style={styles.menuIcon}>🔐</Text>
-                  <Text style={[styles.menuText, { fontFamily: fontSemiBold }]}>
-                    Alterar Minha Senha
-                  </Text>
-                </View>
-                <View style={{ transform: [{ rotate: '180deg' }] }}>
-                  <ChevronLeftIcon size={18} color={Colors.grey400} />
-                </View>
-              </TouchableOpacity>
-            </View>
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  activeOpacity={0.8}
+                  onPress={() => router.push('/(profissional)/clientes' as any)}>
+                  <View style={styles.menuLeft}>
+                    <Text style={styles.menuIcon}>📋</Text>
+                    <Text style={[styles.menuText, { fontFamily: fontSemiBold }]}>
+                      Histórico de Clientes & Fichas
+                    </Text>
+                  </View>
+                  <View style={{ transform: [{ rotate: '180deg' }] }}>
+                    <ChevronLeftIcon size={18} color={Colors.grey400} />
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  activeOpacity={0.8}
+                  onPress={() => router.push('/(profissional)/produtos' as any)}>
+                  <View style={styles.menuLeft}>
+                    <Text style={styles.menuIcon}>🧴</Text>
+                    <Text style={[styles.menuText, { fontFamily: fontSemiBold }]}>
+                      Produtos do Estabelecimento
+                    </Text>
+                  </View>
+                  <View style={{ transform: [{ rotate: '180deg' }] }}>
+                    <ChevronLeftIcon size={18} color={Colors.grey400} />
+                  </View>
+                </TouchableOpacity>
+              </View>
+
+              {/* Segurança */}
+              <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { fontFamily: fontSemiBold }]}>
+                  Segurança
+                </Text>
+
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  activeOpacity={0.8}
+                  onPress={() => router.push('/(profissional)/trocar-senha' as any)}>
+                  <View style={styles.menuLeft}>
+                    <Text style={styles.menuIcon}>🔐</Text>
+                    <Text style={[styles.menuText, { fontFamily: fontSemiBold }]}>
+                      Alterar Minha Senha
+                    </Text>
+                  </View>
+                  <View style={{ transform: [{ rotate: '180deg' }] }}>
+                    <ChevronLeftIcon size={18} color={Colors.grey400} />
+                  </View>
+                </TouchableOpacity>
+              </View>
 
             {/* Sair */}
             <TouchableOpacity

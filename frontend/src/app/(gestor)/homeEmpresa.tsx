@@ -129,10 +129,36 @@ export default function HomeEmpresaScreen() {
         ? 'Não compareceu'
         : appt.status;
 
+    const buttons: any[] = [{ text: 'Fechar', style: 'cancel' }];
+
+    if (appt.status !== 'CANCELLED' && appt.status !== 'NO_SHOW') {
+      buttons.unshift({
+        text: appt.status === 'DONE' ? 'Ver Comanda' : 'Iniciar Atendimento',
+        onPress: () => {
+          router.push({
+            pathname: '/(gestor)/comanda',
+            params: { appointmentId: appt.id, establishmentId },
+          } as any);
+        },
+      });
+    }
+
+    if (appt.status === 'DONE') {
+      buttons.push({
+        text: 'Ficha & Fotos',
+        onPress: () => {
+          router.push({
+            pathname: '/(gestor)/atendimento',
+            params: { appointmentId: appt.id, establishmentId },
+          } as any);
+        },
+      });
+    }
+
     Alert.alert(
       'Detalhes do Agendamento',
       `Serviço: ${appt.serviceName}\nProfissional: ${appt.professionalName}\nCliente: ${appt.clientName}\nHorário: ${timeFormatted}\nValor: R$ ${appt.servicePrice ? appt.servicePrice.toFixed(2) : '0.00'}\nStatus: ${statusLabel}${appt.isFitIn ? ' (Encaixe)' : ''}`,
-      [{ text: 'Fechar', style: 'cancel' }]
+      buttons
     );
   }
 

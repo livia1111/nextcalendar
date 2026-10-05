@@ -5,4 +5,4 @@
  *  true  → tudo roda em memória, sem chamar o backend (estado atual).
  *  false → usa as chamadas reais à API (basta trocar aqui na hora de integrar).
  */
-export const USE_MOCK_COMANDA = true;
+export const USE_MOCK_COMANDA = false;

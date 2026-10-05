@@ -1,8 +1,7 @@
 /**
- * Tela de Produtos (cadastro, listagem, edição e exclusão).
- *
- * Rota: /produtos  (arquivo solto em src/app, igual a /empresa)
- * Hoje usa dados de exemplo (USE_MOCK_COMANDA em src/constants/mock.ts).
+ * Componente unificado de Produtos (Gestor e Profissional).
+ * - Gestor: CRUD completo (criar, editar, excluir, estoque).
+ * - Profissional: Somente leitura (busca e catálogo).
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -23,6 +22,7 @@ import { ChevronLeftIcon, PlusIcon, SearchIcon } from '@/components/icons';
 import { ProductFormModal } from '@/components/comanda/ProductFormModal';
 import { Colors } from '@/constants/colors';
 import { DEFAULT_ESTABLISHMENT_ID } from '@/constants/establishment';
+import { useAuth } from '@/context/AuthContext';
 import { useAppFonts } from '@/hooks/use-fonts';
 import { useEstablishment } from '@/hooks/useEstablishment';
 import {
@@ -42,8 +42,10 @@ export default function ProdutosScreen() {
   const { fontRegular, fontSemiBold, fontBold } = useAppFonts();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { user } = useAuth();
+  const isManager = user?.role === 'MANAGER';
+
   const { establishmentId: loggedEstablishmentId } = useEstablishment();
-  // Fallback para o estabelecimento do seed enquanto estiver em modo mock
   const establishmentId = loggedEstablishmentId || DEFAULT_ESTABLISHMENT_ID;
 
   const [products, setProducts] = useState<ProductResponse[]>([]);
@@ -53,7 +55,7 @@ export default function ProdutosScreen() {
   const [query, setQuery] = useState('');
   const [feedback, setFeedback] = useState('');
 
-  // modal: undefined = fechado | null = novo | produto = edição
+  // modal: undefined = fechado | null = novo | produto = edição (apenas gestor)
   const [formTarget, setFormTarget] = useState<ProductResponse | null | undefined>(undefined);
 
   const load = useCallback(async () => {
@@ -71,7 +73,6 @@ export default function ProdutosScreen() {
     load();
   }, [load]);
 
-  // some o aviso de sucesso depois de alguns segundos
   useEffect(() => {
     if (!feedback) return;
     const t = setTimeout(() => setFeedback(''), 2500);
@@ -85,6 +86,7 @@ export default function ProdutosScreen() {
   }
 
   async function handleSubmit(payload: ProductPayload) {
+    if (!isManager) return;
     if (formTarget) {
       await updateProduct(establishmentId, formTarget.id, payload);
       setFeedback('Produto atualizado com sucesso!');
@@ -96,17 +98,12 @@ export default function ProdutosScreen() {
   }
 
   async function handleDelete(productId: string) {
+    if (!isManager) return;
     await deleteProduct(establishmentId, productId);
     setFeedback('Produto excluído.');
     await load();
   }
 
-  function goBack() {
-    if (router.canGoBack()) router.back();
-    else router.replace('/');
-  }
-
-  // Busca local (a API também tem /products/search?name=, se quiserem trocar depois)
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return products;
@@ -115,6 +112,14 @@ export default function ProdutosScreen() {
     );
   }, [products, query]);
 
+  function goBack() {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace(isManager ? '/(gestor)/perfil' : '/(profissional)/perfil');
+    }
+  }
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -122,7 +127,9 @@ export default function ProdutosScreen() {
         <TouchableOpacity style={styles.backBtn} onPress={goBack} activeOpacity={0.7}>
           <ChevronLeftIcon size={20} color={Colors.goldDark} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { fontFamily: fontSemiBold }]}>Produtos</Text>
+        <Text style={[styles.headerTitle, { fontFamily: fontSemiBold }]}>
+          {isManager ? 'Gestão de Produtos' : 'Produtos do Estabelecimento'}
+        </Text>
         <View style={styles.backBtn} />
       </View>
 
@@ -132,7 +139,9 @@ export default function ProdutosScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.gold} />}>
         <Text style={[styles.subtitle, { fontFamily: fontRegular }]}>
-          Cadastre os produtos vendidos no estabelecimento. Eles ficam disponíveis para adicionar nas comandas.
+          {isManager
+            ? 'Cadastre e gerencie os produtos vendidos no estabelecimento. Eles ficam disponíveis para adicionar nas comandas.'
+            : 'Consulte os produtos disponíveis para adicionar nas comandas dos seus atendimentos.'}
         </Text>
 
         {feedback ? (
@@ -141,10 +150,13 @@ export default function ProdutosScreen() {
           </View>
         ) : null}
 
-        <TouchableOpacity style={styles.newBtn} activeOpacity={0.85} onPress={() => setFormTarget(null)}>
-          <PlusIcon size={18} color={Colors.white} />
-          <Text style={[styles.newBtnText, { fontFamily: fontSemiBold }]}>Novo Produto</Text>
-        </TouchableOpacity>
+        {/* Botão Novo Produto apenas visível para Gestor */}
+        {isManager && (
+          <TouchableOpacity style={styles.newBtn} activeOpacity={0.85} onPress={() => setFormTarget(null)}>
+            <PlusIcon size={18} color={Colors.white} />
+            <Text style={[styles.newBtnText, { fontFamily: fontSemiBold }]}>Novo Produto</Text>
+          </TouchableOpacity>
+        )}
 
         <View style={styles.searchBox}>
           <SearchIcon size={18} />
@@ -176,7 +188,11 @@ export default function ProdutosScreen() {
               {products.length === 0 ? 'Nenhum produto cadastrado' : 'Nenhum produto encontrado'}
             </Text>
             <Text style={[styles.stateText, { fontFamily: fontRegular }]}>
-              {products.length === 0 ? 'Toque em "Novo Produto" para cadastrar o primeiro.' : 'Tente outro termo de busca.'}
+              {products.length === 0
+                ? isManager
+                  ? 'Toque em "Novo Produto" para cadastrar o primeiro.'
+                  : 'Nenhum produto disponível no momento.'
+                : 'Tente outro termo de busca.'}
             </Text>
           </View>
         ) : (
@@ -188,8 +204,10 @@ export default function ProdutosScreen() {
                 <TouchableOpacity
                   key={p.id}
                   style={styles.card}
-                  activeOpacity={0.75}
-                  onPress={() => setFormTarget(p)}>
+                  activeOpacity={isManager ? 0.75 : 1}
+                  onPress={() => {
+                    if (isManager) setFormTarget(p);
+                  }}>
                   <View style={styles.cardInfo}>
                     <Text style={[styles.cardName, { fontFamily: fontSemiBold }]} numberOfLines={1}>
                       {p.name}
@@ -217,33 +235,39 @@ export default function ProdutosScreen() {
         )}
       </ScrollView>
 
-      <ProductFormModal
-        visible={formTarget !== undefined}
-        product={formTarget ?? null}
-        onClose={() => setFormTarget(undefined)}
-        onSubmit={handleSubmit}
-        onDelete={handleDelete}
-      />
+      {/* Modal só abre para Gestor */}
+      {isManager && (
+        <ProductFormModal
+          visible={formTarget !== undefined}
+          product={formTarget ?? null}
+          onClose={() => setFormTarget(undefined)}
+          onSubmit={handleSubmit}
+          onDelete={handleDelete}
+        />
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.surface },
+  container: { flex: 1, backgroundColor: Colors.white },
+
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingBottom: 12,
-    backgroundColor: Colors.white,
     borderBottomWidth: 1,
     borderBottomColor: Colors.grey100,
+    backgroundColor: Colors.white,
   },
-  backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 17, color: Colors.dark },
+
   content: { padding: 20, gap: 14 },
-  subtitle: { fontSize: 13, color: Colors.grey400 },
+  subtitle: { fontSize: 13, color: Colors.grey500, lineHeight: 18 },
+
   feedbackBox: {
     backgroundColor: '#E8F8EE',
     borderWidth: 1,
@@ -252,29 +276,37 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 14,
   },
-  feedbackText: { color: '#1B873F', fontSize: 13, textAlign: 'center' },
+  feedbackText: { color: '#1B873F', fontSize: 13 },
+
   newBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
     height: 48,
-    borderRadius: 12,
+    borderRadius: 14,
     backgroundColor: Colors.gold,
   },
   newBtnText: { color: Colors.white, fontSize: 15 },
+
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingHorizontal: 12,
     height: 44,
     borderRadius: 12,
-    backgroundColor: Colors.white,
     borderWidth: 1,
     borderColor: Colors.grey100,
+    backgroundColor: Colors.surface,
+    paddingHorizontal: 12,
   },
-  searchInput: { flex: 1, fontSize: 15, color: Colors.dark, padding: 0 },
+  searchInput: { flex: 1, fontSize: 14, color: Colors.dark, padding: 0 },
+
+  stateBox: { paddingVertical: 48, alignItems: 'center', justifyContent: 'center', gap: 8 },
+  stateTitle: { fontSize: 16, color: Colors.dark, marginTop: 4 },
+  stateText: { fontSize: 13, color: Colors.grey500, textAlign: 'center', maxWidth: 260 },
+  retryText: { fontSize: 13, color: Colors.goldDark, marginTop: 4 },
+
   list: { gap: 10 },
   card: {
     flexDirection: 'row',
@@ -282,35 +314,23 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
     padding: 14,
-    borderRadius: 16,
-    backgroundColor: Colors.white,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: Colors.grey100,
+    backgroundColor: Colors.white,
   },
   cardInfo: { flex: 1, gap: 6 },
   cardName: { fontSize: 15, color: Colors.dark },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   categoryChip: {
     backgroundColor: '#FEF9EE',
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-    borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#FDEFD0',
   },
   categoryText: { fontSize: 11, color: Colors.goldDark },
-  stockText: { fontSize: 12, color: Colors.grey500 },
-  cardPrice: { fontSize: 15, color: Colors.goldDark },
-  stateBox: {
-    padding: 28,
-    backgroundColor: Colors.white,
-    borderRadius: 16,
-    alignItems: 'center',
-    gap: 6,
-    borderWidth: 1,
-    borderColor: Colors.grey100,
-  },
-  stateTitle: { fontSize: 15, color: Colors.dark, marginTop: 4 },
-  stateText: { fontSize: 13, color: Colors.grey400, textAlign: 'center' },
-  retryText: { fontSize: 14, color: Colors.goldDark, marginTop: 6 },
+  stockText: { fontSize: 11, color: Colors.grey500 },
+  cardPrice: { fontSize: 15, color: Colors.dark },
 });

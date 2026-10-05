@@ -1,21 +1,11 @@
 /**
  * Tela de Comanda (abrir, adicionar serviços/produtos, desconto, pagamento e finalizar).
- *
- * Rota: /comanda
- * Parâmetros (todos opcionais enquanto estiver em modo mock):
- *   - appointmentId   → abre (ou recupera) a comanda desse agendamento
- *   - establishmentId → estabelecimento do profissional logado
- *   - orderId         → se já souber o id da comanda, abre direto por ele
- *
- * Exemplo de navegação (a partir do detalhe do agendamento):
- *   router.push({ pathname: '/comanda', params: { appointmentId: appt.id, establishmentId } });
- *
- * Hoje usa dados de exemplo (USE_MOCK_COMANDA em src/constants/mock.ts).
  */
 
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   KeyboardAvoidingView,
   Modal,
@@ -35,11 +25,9 @@ import { TrashIcon } from '@/components/comanda/ComandaIcons';
 import { ItemPickerModal, type PickerItem } from '@/components/comanda/ItemPickerModal';
 import { Colors } from '@/constants/colors';
 import { DEFAULT_ESTABLISHMENT_ID } from '@/constants/establishment';
-import { USE_MOCK_COMANDA } from '@/constants/mocks';
 import { useAuth } from '@/context/AuthContext';
 import { useAppFonts } from '@/hooks/use-fonts';
 import {
-  MOCK_APPOINTMENT_ID,
   addOrderItem,
   finishOrder,
   getOrder,
@@ -54,7 +42,6 @@ import {
 import { listProducts } from '@/services/produtoServices';
 import { getApiErrorMessage } from '@/utils/apiError';
 import { formatBRL, maskBRL, numberToBRLMask, parseBRL } from '@/utils/money';
-import { getRoleHomeRoute } from '@/utils/roleHomeRoute';
 
 const PAYMENT_OPTIONS: { value: PaymentMethod; label: string }[] = [
   { value: 'CASH', label: 'Dinheiro' },
@@ -82,7 +69,7 @@ export default function ComandaScreen() {
   const params = useLocalSearchParams<{ appointmentId?: string; establishmentId?: string; orderId?: string }>();
 
   const establishmentId = params.establishmentId || DEFAULT_ESTABLISHMENT_ID;
-  const appointmentId = params.appointmentId || (USE_MOCK_COMANDA ? MOCK_APPOINTMENT_ID : '');
+  const appointmentId = params.appointmentId || '';
   const orderIdParam = params.orderId;
 
   const [order, setOrder] = useState<Order | null>(null);
@@ -142,17 +129,16 @@ export default function ComandaScreen() {
     }
   }
 
-  // ─── Adicionar serviço / produto ─────────────────────────────────────────
-  async function openPicker(mode: OrderItemType) {
-    setActionError('');
+  // ─── Ações de itens ──────────────────────────────────────────────────────
+  async function handleOpenPicker(mode: OrderItemType) {
+    if (isClosed) return;
     setPickerMode(mode);
-    setPickerItems([]);
     setPickerLoading(true);
     try {
       if (mode === 'SERVICE') {
         const services = await listCatalogServices(establishmentId);
         setPickerItems(
-          services.map((s) => ({ id: s.id, name: s.name, price: s.price, subtitle: s.category })),
+          services.map((s) => ({ id: s.id, name: s.name, price: s.price, category: s.category })),
         );
       } else {
         const products = await listProducts(establishmentId);
@@ -161,42 +147,52 @@ export default function ComandaScreen() {
             id: p.id,
             name: p.name,
             price: p.price,
-            subtitle: `${p.category} • Estoque: ${p.stockQuantity}`,
-            disabled: p.stockQuantity <= 0,
-            disabledLabel: 'Sem estoque',
+            category: p.category,
+            subtitle: p.stockQuantity != null ? `Estoque: ${p.stockQuantity}` : undefined,
           })),
         );
       }
     } catch (err) {
       setActionError(getApiErrorMessage(err, 'Não foi possível carregar a lista.'));
+      setPickerMode(null);
     } finally {
       setPickerLoading(false);
     }
   }
 
-  async function handleConfirmItem(item: PickerItem, quantity: number) {
-    if (!order || !pickerMode) return;
-    const ok = await run(() =>
-      addOrderItem(establishmentId, order.id, { itemType: pickerMode, itemId: item.id, quantity }),
+  function handleSelectItem(item: PickerItem, quantity: number) {
+    if (!order || !pickerMode || isClosed) return;
+    const mode = pickerMode;
+    setPickerMode(null);
+    run(() =>
+      addOrderItem(establishmentId, order.id, {
+        itemType: mode,
+        itemId: item.id,
+        quantity,
+      }),
     );
-    if (ok) setPickerMode(null);
   }
 
   function handleRemoveItem(itemId: string) {
-    if (!order) return;
+    if (!order || isClosed) return;
     run(() => removeOrderItem(establishmentId, order.id, itemId));
   }
 
-  // ─── Desconto e forma de pagamento ───────────────────────────────────────
-  async function handleApplyDiscount() {
-    if (!order) return;
-    const value = discountText.trim() ? parseBRL(discountText) : 0;
-    if (value > order.subtotal) {
-      setDiscountError('O desconto não pode ser maior que o subtotal.');
+  // ─── Desconto ────────────────────────────────────────────────────────────
+  function handleChangeDiscount(text: string) {
+    setDiscountText(maskBRL(text));
+    setDiscountError('');
+  }
+
+  function handleApplyDiscount() {
+    if (!order || isClosed) return;
+    const amount = parseBRL(discountText);
+    if (amount > order.subtotal) {
+      setDiscountError(`Desconto não pode ser maior que o subtotal (${formatBRL(order.subtotal)})`);
       return;
     }
     setDiscountError('');
-    await run(() => updateOrder(establishmentId, order.id, { discountAmount: value }), true);
+    run(() => updateOrder(establishmentId, order.id, { discountAmount: amount }));
   }
 
   function handleSelectPayment(method: PaymentMethod) {
@@ -221,13 +217,39 @@ export default function ComandaScreen() {
 
   async function handleConfirmFinish() {
     if (!order) return;
-    await run(() => finishOrder(establishmentId, order.id));
-    setConfirmFinish(false); // se deu erro, a mensagem aparece no rodapé da tela
+    setConfirmFinish(false);
+    const success = await run(() => finishOrder(establishmentId, order.id));
+    if (success) {
+      Alert.alert(
+        'Atendimento Finalizado!',
+        'A comanda foi encerrada com sucesso. Deseja registrar a ficha técnica e fotos do cliente agora?',
+        [
+          {
+            text: 'Mais tarde',
+            style: 'cancel',
+            onPress: () => goBack(),
+          },
+          {
+            text: 'Ir para Ficha & Fotos',
+            onPress: () => {
+              const targetRoute = user?.role === 'MANAGER' ? '/(gestor)/atendimento' : '/(profissional)/atendimento';
+              router.replace({
+                pathname: targetRoute as any,
+                params: { appointmentId: order.appointmentId, establishmentId },
+              });
+            },
+          },
+        ]
+      );
+    }
   }
 
   function goBack() {
-    if (router.canGoBack()) router.back();
-    else router.replace((user ? getRoleHomeRoute(user.role) : '/') as any);
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace(user?.role === 'MANAGER' ? '/(gestor)/homeEmpresa' : '/(profissional)/home');
+    }
   }
 
   // ─── Estados de carregamento / erro ──────────────────────────────────────
@@ -255,38 +277,40 @@ export default function ComandaScreen() {
     );
   }
 
-  const initials = (order.professionalName || '?').trim().charAt(0).toUpperCase();
-
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity style={styles.headerBtn} onPress={goBack} activeOpacity={0.7}>
           <ChevronLeftIcon size={20} color={Colors.goldDark} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { fontFamily: fontSemiBold }]}>Comanda</Text>
+        <Text style={[styles.headerTitle, { fontFamily: fontSemiBold }]}>
+          Comanda {isClosed ? '• Concluída' : ''}
+        </Text>
         <View style={styles.headerBtn} />
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.content}>
-        {/* Profissional / cliente / status */}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]}>
+        {/* Identificação do Atendimento */}
         <View style={styles.personRow}>
           {order.professionalPhotoUrl ? (
             <Image source={{ uri: order.professionalPhotoUrl }} style={styles.avatar} />
           ) : (
             <View style={[styles.avatar, styles.avatarFallback]}>
-              <Text style={[styles.avatarInitial, { fontFamily: fontBold }]}>{initials}</Text>
+              <Text style={[styles.avatarInitial, { fontFamily: fontBold }]}>
+                {order.professionalName.charAt(0).toUpperCase()}
+              </Text>
             </View>
           )}
           <View style={styles.personInfo}>
-            <Text style={[styles.clientName, { fontFamily: fontSemiBold }]} numberOfLines={1}>
-              {order.clientName || 'Cliente avulso'}
-            </Text>
-            <Text style={[styles.professionalName, { fontFamily: fontRegular }]} numberOfLines={1}>
-              Atendimento com {order.professionalName}
+            <Text style={[styles.clientName, { fontFamily: fontBold }]}>{order.clientName}</Text>
+            <Text style={[styles.professionalName, { fontFamily: fontRegular }]}>
+              Atendido por {order.professionalName}
             </Text>
           </View>
           <View style={[styles.statusBadge, isClosed ? styles.statusClosed : styles.statusOpen]}>
@@ -295,7 +319,7 @@ export default function ComandaScreen() {
                 styles.statusText,
                 { fontFamily: fontSemiBold, color: isClosed ? '#1E64B4' : '#1B873F' },
               ]}>
-              {isClosed ? 'Finalizada' : 'Aberta'}
+              {isClosed ? 'Fechada' : 'Aberta'}
             </Text>
           </View>
         </View>
@@ -303,36 +327,38 @@ export default function ComandaScreen() {
         {isClosed && (
           <View style={styles.closedBanner}>
             <Text style={[styles.closedBannerText, { fontFamily: fontRegular }]}>
-              Comanda finalizada em {formatDateTime(order.closedAt)}. Não é possível alterá-la.
+              Esta comanda foi finalizada em {formatDateTime(order.closedAt)} e não pode mais ser
+              alterada.
             </Text>
           </View>
         )}
 
-        {/* Itens */}
+        {/* Itens da Comanda */}
         <View style={styles.itemsCard}>
           {order.items.length === 0 ? (
             <Text style={[styles.emptyItems, { fontFamily: fontRegular }]}>Nenhum item na comanda.</Text>
           ) : (
-            order.items.map((item, index) => (
-              <View key={item.id} style={[styles.itemRow, index > 0 && styles.itemRowBorder]}>
+            order.items.map((item, idx) => (
+              <View
+                key={item.id}
+                style={[styles.itemRow, idx > 0 && styles.itemRowBorder]}>
                 <View style={styles.itemInfo}>
-                  <Text style={[styles.itemName, { fontFamily: fontRegular }]} numberOfLines={2}>
-                    {item.name}
-                  </Text>
+                  <Text style={[styles.itemName, { fontFamily: fontSemiBold }]}>{item.name}</Text>
                   <Text style={[styles.itemMeta, { fontFamily: fontRegular }]}>
-                    {item.itemType === 'SERVICE' ? 'Serviço' : 'Produto'}
-                    {item.quantity > 1 ? ` • ${item.quantity}x ${formatBRL(item.unitPrice)}` : ''}
+                    {item.itemType === 'SERVICE' ? 'Serviço' : 'Produto'} • {item.quantity}x{' '}
+                    {formatBRL(item.unitPrice)}
                   </Text>
                 </View>
-                <Text style={[styles.itemPrice, { fontFamily: fontBold }]}>{formatBRL(item.subtotal)}</Text>
+                <Text style={[styles.itemPrice, { fontFamily: fontSemiBold }]}>
+                  {formatBRL(item.subtotal)}
+                </Text>
                 {!isClosed && (
                   <TouchableOpacity
                     style={styles.trashBtn}
-                    disabled={busy}
-                    activeOpacity={0.6}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    onPress={() => handleRemoveItem(item.id)}>
-                    <TrashIcon size={17} color={Colors.grey400} />
+                    onPress={() => handleRemoveItem(item.id)}
+                    activeOpacity={0.7}
+                    disabled={busy}>
+                    <TrashIcon size={18} color={Colors.error} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -340,21 +366,22 @@ export default function ComandaScreen() {
           )}
         </View>
 
+        {/* Botões de Adicionar (apenas se aberta) */}
         {!isClosed && (
           <View style={styles.addRow}>
             <TouchableOpacity
               style={styles.addBtn}
               activeOpacity={0.8}
               disabled={busy}
-              onPress={() => openPicker('SERVICE')}>
-              <Text style={[styles.addBtnText, { fontFamily: fontSemiBold }]}>+ Adicionar Serviços</Text>
+              onPress={() => handleOpenPicker('SERVICE')}>
+              <Text style={[styles.addBtnText, { fontFamily: fontSemiBold }]}>+ Adicionar Serviço</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.addBtn}
               activeOpacity={0.8}
               disabled={busy}
-              onPress={() => openPicker('PRODUCT')}>
-              <Text style={[styles.addBtnText, { fontFamily: fontSemiBold }]}>+ Adicionar Produtos</Text>
+              onPress={() => handleOpenPicker('PRODUCT')}>
+              <Text style={[styles.addBtnText, { fontFamily: fontSemiBold }]}>+ Adicionar Produto</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -364,22 +391,19 @@ export default function ComandaScreen() {
           <Text style={[styles.cardLabel, { fontFamily: fontSemiBold }]}>Desconto</Text>
           {isClosed ? (
             <Text style={[styles.discountValue, { fontFamily: fontSemiBold }]}>
-              {order.discountAmount > 0 ? `-${formatBRL(order.discountAmount)}` : formatBRL(0)}
+              {order.discountAmount > 0 ? `- ${formatBRL(order.discountAmount)}` : 'Nenhum'}
             </Text>
           ) : (
             <View style={styles.discountInputRow}>
               <View style={styles.discountInputWrap}>
-                <Text style={[styles.currencyPrefix, { fontFamily: fontSemiBold }]}>R$</Text>
+                <Text style={[styles.currencyPrefix, { fontFamily: fontRegular }]}>R$</Text>
                 <TextInput
                   style={[styles.discountInput, { fontFamily: fontRegular }]}
-                  value={discountText}
-                  onChangeText={(t) => {
-                    setDiscountText(maskBRL(t));
-                    setDiscountError('');
-                  }}
                   placeholder="0,00"
                   placeholderTextColor={Colors.grey400}
-                  keyboardType="number-pad"
+                  keyboardType="numeric"
+                  value={discountText}
+                  onChangeText={handleChangeDiscount}
                   editable={!busy}
                 />
               </View>
@@ -401,44 +425,50 @@ export default function ComandaScreen() {
         <View style={styles.totalsBox}>
           <View style={styles.totalLine}>
             <Text style={[styles.totalLineLabel, { fontFamily: fontRegular }]}>Subtotal</Text>
-            <Text style={[styles.totalLineValue, { fontFamily: fontRegular }]}>{formatBRL(order.subtotal)}</Text>
+            <Text style={[styles.totalLineValue, { fontFamily: fontRegular }]}>
+              {formatBRL(order.subtotal)}
+            </Text>
           </View>
           {order.discountAmount > 0 && (
             <View style={styles.totalLine}>
               <Text style={[styles.totalLineLabel, { fontFamily: fontRegular }]}>Desconto</Text>
               <Text style={[styles.totalLineValue, { fontFamily: fontRegular, color: Colors.error }]}>
-                -{formatBRL(order.discountAmount)}
+                - {formatBRL(order.discountAmount)}
               </Text>
             </View>
           )}
           <View style={styles.divider} />
           <View style={styles.totalMain}>
-            <Text style={[styles.totalTitle, { fontFamily: fontBold }]}>TOTAL</Text>
-            <Text style={[styles.totalValue, { fontFamily: fontBold }]}>{formatBRL(order.totalAmount)}</Text>
+            <Text style={[styles.totalTitle, { fontFamily: fontBold }]}>Total</Text>
+            <Text style={[styles.totalValue, { fontFamily: fontBold }]}>
+              {formatBRL(order.totalAmount)}
+            </Text>
           </View>
         </View>
 
-        {/* Forma de pagamento */}
+        {/* Forma de Pagamento */}
         <View style={styles.paymentBox}>
           <Text style={[styles.paymentTitle, { fontFamily: fontSemiBold }]}>Forma de Pagamento</Text>
           {isClosed ? (
-            <Text style={[styles.paymentClosed, { fontFamily: fontSemiBold }]}>{paymentLabel(order.paymentMethod)}</Text>
+            <Text style={[styles.paymentClosed, { fontFamily: fontRegular }]}>
+              {paymentLabel(order.paymentMethod)}
+            </Text>
           ) : (
             <View style={styles.paymentGrid}>
               {PAYMENT_OPTIONS.map((opt) => {
-                const active = order.paymentMethod === opt.value;
+                const selected = order.paymentMethod === opt.value;
                 return (
                   <TouchableOpacity
                     key={opt.value}
-                    style={[styles.paymentChip, active && styles.paymentChipActive]}
+                    style={[styles.paymentChip, selected && styles.paymentChipActive]}
                     activeOpacity={0.8}
                     disabled={busy}
                     onPress={() => handleSelectPayment(opt.value)}>
                     <Text
                       style={[
                         styles.paymentChipText,
-                        { fontFamily: fontSemiBold },
-                        active && styles.paymentChipTextActive,
+                        { fontFamily: selected ? fontSemiBold : fontRegular },
+                        selected && styles.paymentChipTextActive,
                       ]}>
                       {opt.label}
                     </Text>
@@ -448,20 +478,19 @@ export default function ComandaScreen() {
             </View>
           )}
         </View>
+
+        {actionError ? (
+          <Text style={[styles.errorInline, { fontFamily: fontRegular, textAlign: 'center' }]}>
+            {actionError}
+          </Text>
+        ) : null}
       </ScrollView>
 
-      {/* Rodapé fixo */}
-      <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
-        {actionError && !pickerMode ? (
-          <Text style={[styles.errorInline, { fontFamily: fontRegular, textAlign: 'center' }]}>{actionError}</Text>
-        ) : null}
-        {isClosed ? (
-          <TouchableOpacity style={styles.finishBtn} activeOpacity={0.85} onPress={goBack}>
-            <Text style={[styles.finishBtnText, { fontFamily: fontBold }]}>Voltar</Text>
-          </TouchableOpacity>
-        ) : (
+      {/* Botão de Finalizar no rodapé */}
+      {!isClosed && (
+        <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
           <TouchableOpacity
-            style={[styles.finishBtn, busy && { opacity: 0.6 }]}
+            style={styles.finishBtn}
             activeOpacity={0.85}
             disabled={busy}
             onPress={handlePressFinish}>
@@ -471,29 +500,23 @@ export default function ComandaScreen() {
               <Text style={[styles.finishBtnText, { fontFamily: fontBold }]}>Finalizar Comanda</Text>
             )}
           </TouchableOpacity>
-        )}
-      </View>
+        </View>
+      )}
 
-      {/* Seletor de serviço / produto */}
+      {/* Modal Seletor de Itens */}
       <ItemPickerModal
         visible={pickerMode !== null}
-        title={pickerMode === 'PRODUCT' ? 'Adicionar Produto' : 'Adicionar Serviço'}
-        searchPlaceholder={pickerMode === 'PRODUCT' ? 'Buscar produto' : 'Buscar serviço'}
-        emptyText={
-          pickerMode === 'PRODUCT'
-            ? 'Nenhum produto cadastrado. O gestor pode cadastrar em Produtos.'
-            : 'Nenhum serviço cadastrado.'
-        }
+        title={pickerMode === 'SERVICE' ? 'Adicionar Serviço' : 'Adicionar Produto'}
+        searchPlaceholder={pickerMode === 'SERVICE' ? 'Buscar serviço...' : 'Buscar produto...'}
+        emptyText={pickerMode === 'SERVICE' ? 'Nenhum serviço encontrado.' : 'Nenhum produto encontrado.'}
         items={pickerItems}
         loading={pickerLoading}
-        submitting={busy}
-        error={pickerMode ? actionError : ''}
         onClose={() => setPickerMode(null)}
-        onConfirm={handleConfirmItem}
+        onConfirm={handleSelectItem}
       />
 
-      {/* Confirmação de finalização */}
-      <Modal visible={confirmFinish} transparent animationType="fade" onRequestClose={() => setConfirmFinish(false)}>
+      {/* Modal de Confirmação de Finalização */}
+      <Modal visible={confirmFinish} transparent animationType="fade">
         <View style={styles.dialogOverlay}>
           <View style={styles.dialog}>
             <Text style={[styles.dialogTitle, { fontFamily: fontSemiBold }]}>Finalizar comanda?</Text>

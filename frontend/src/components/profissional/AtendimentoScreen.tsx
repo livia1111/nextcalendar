@@ -14,7 +14,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeftIcon } from '@/components/icons';
-import { PhotoGallery, type GalleryPhoto } from '@/components/professional/PhotoGallery';
+import { PhotoGallery, type GalleryPhoto } from '@/components/profissional/PhotoGallery';
 import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/colors';
 import { useAppFonts } from '@/hooks/use-fonts';

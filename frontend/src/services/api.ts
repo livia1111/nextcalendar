@@ -31,9 +31,9 @@ api.interceptors.request.use(async (config) => {
 export default api;
 
 // ─── Config extra usada pelas telas de Serviços / Profissionais ────────────────
-export const API_BASE_URL = Platform.OS === 'android'
-  ? 'http://10.0.2.2:8080'
-  : 'http://localhost:8080';
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL
+  ? process.env.EXPO_PUBLIC_API_URL.replace(/\/api\/v1\/?$/, '')
+  : (Platform.OS === 'android' ? 'http://10.0.2.2:8080' : 'http://localhost:8080');
 
 // O establishmentId de desenvolvimento está centralizado em src/constants/establishment.ts
 // (lido de EXPO_PUBLIC_ESTABLISHMENT_ID no .env)

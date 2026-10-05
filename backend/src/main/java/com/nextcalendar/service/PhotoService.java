@@ -33,4 +33,9 @@ public class PhotoService {
     public PhotoEntity findById(UUID id) {
         return photoRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Foto", id));
     }
+
+    public void delete(UUID id) {
+        PhotoEntity photo = findById(id);
+        photoRepository.delete(photo);
+    }
 }

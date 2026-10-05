@@ -38,6 +38,11 @@ public class ProductService {
 
     @Transactional
     public ProductMinResponseDTO createProduct(UUID establishmentId, ProductCreateDTO productDTO){
+        com.nextcalendar.config.SecurityUtils.getAuthenticatedUser().ifPresent(u -> {
+            if (u.getRole() == com.nextcalendar.entity.UserRole.PROFESSIONAL) {
+                throw new org.springframework.security.access.AccessDeniedException("Profissionais não têm permissão para cadastrar ou alterar produtos.");
+            }
+        });
         EstablishmentEntity establishment = findEstablishment(establishmentId);
 
         if(productRepository.existsByNameAndEstablishmentAndActiveTrue(productDTO.name(), establishment)){
@@ -65,6 +70,11 @@ public class ProductService {
 
     @Transactional
     public ProductMinResponseDTO updateProduct(UUID establishmentId, UUID idProduct, ProductUpdateDTO productDTO){
+        com.nextcalendar.config.SecurityUtils.getAuthenticatedUser().ifPresent(u -> {
+            if (u.getRole() == com.nextcalendar.entity.UserRole.PROFESSIONAL) {
+                throw new org.springframework.security.access.AccessDeniedException("Profissionais não têm permissão para cadastrar ou alterar produtos.");
+            }
+        });
         EstablishmentEntity establishment = findEstablishment(establishmentId);
 
         ProductEntity productEntity = productRepository.findByIdAndEstablishmentAndActiveTrue(idProduct, establishment)
@@ -103,6 +113,11 @@ public class ProductService {
 
     @Transactional
     public void deleteProduct(UUID id){
+        com.nextcalendar.config.SecurityUtils.getAuthenticatedUser().ifPresent(u -> {
+            if (u.getRole() == com.nextcalendar.entity.UserRole.PROFESSIONAL) {
+                throw new org.springframework.security.access.AccessDeniedException("Profissionais não têm permissão para cadastrar ou alterar produtos.");
+            }
+        });
         ProductEntity product = productRepository.findByIdAndActiveTrue(id)
                 .orElseThrow(()->new EntityNotFoundException("Produto", id));
 

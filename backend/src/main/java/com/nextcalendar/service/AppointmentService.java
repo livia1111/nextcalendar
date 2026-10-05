@@ -31,6 +31,7 @@ public class AppointmentService {
     private final ProfessionalRepository professionalRepository;
     private final ServiceRepository serviceRepository;
     private final ClientRepository clientRepository;
+    private final OrderRepository orderRepository;
     private final AppointmentMapper appointmentMapper;
 
     public AppointmentService(AppointmentRepository appointmentRepository,
@@ -39,6 +40,7 @@ public class AppointmentService {
                               ProfessionalRepository professionalRepository,
                               ServiceRepository serviceRepository,
                               ClientRepository clientRepository,
+                              OrderRepository orderRepository,
                               AppointmentMapper appointmentMapper) {
         this.appointmentRepository = appointmentRepository;
         this.workingHoursRepository = workingHoursRepository;
@@ -46,6 +48,7 @@ public class AppointmentService {
         this.professionalRepository = professionalRepository;
         this.serviceRepository = serviceRepository;
         this.clientRepository = clientRepository;
+        this.orderRepository = orderRepository;
         this.appointmentMapper = appointmentMapper;
     }
 
@@ -200,6 +203,14 @@ public class AppointmentService {
 
         appointment.setStatus(AppointmentStatus.CANCELLED);
         AppointmentEntity saved = appointmentRepository.save(appointment);
+
+        orderRepository.findByAppointmentId(id).ifPresent(order -> {
+            if (order.getStatus() == OrderStatus.OPEN) {
+                order.setStatus(OrderStatus.CANCELLED);
+                orderRepository.save(order);
+            }
+        });
+
         return appointmentMapper.toResponseDTO(saved);
     }
 

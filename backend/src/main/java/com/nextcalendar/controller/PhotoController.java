@@ -34,4 +34,10 @@ public class PhotoController {
                 .contentType(MediaType.parseMediaType(photo.getContentType()))
                 .body(photo.getData());
     }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deletePhoto(@PathVariable UUID id) {
+        photoService.delete(id);
+    }
 }

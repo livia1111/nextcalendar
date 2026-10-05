@@ -21,6 +21,8 @@ import com.nextcalendar.repository.EstablishmentRepository;
 import com.nextcalendar.repository.ProductRepository;
 import com.nextcalendar.repository.ServiceRepository;
 
+import com.nextcalendar.repository.ProfessionalRepository;
+import com.nextcalendar.entity.ProfessionalEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +39,7 @@ public class OrderService {
     private final EstablishmentRepository establishmentRepository;
     private final ServiceRepository serviceRepository;
     private final ProductRepository productRepository;
+    private final ProfessionalRepository professionalRepository;
     private final OrderMapper orderMapper;
 
     public OrderService(OrderRepository orderRepository,
@@ -44,13 +47,27 @@ public class OrderService {
                         EstablishmentRepository establishmentRepository,
                         ServiceRepository serviceRepository,
                         ProductRepository productRepository,
+                        ProfessionalRepository professionalRepository,
                         OrderMapper orderMapper) {
         this.orderRepository = orderRepository;
         this.appointmentRepository = appointmentRepository;
         this.establishmentRepository = establishmentRepository;
         this.serviceRepository = serviceRepository;
         this.productRepository = productRepository;
+        this.professionalRepository = professionalRepository;
         this.orderMapper = orderMapper;
+    }
+
+    private void validateOrderAccess(AppointmentEntity appointment) {
+        com.nextcalendar.config.SecurityUtils.getAuthenticatedUser().ifPresent(u -> {
+            if (u.getRole() == com.nextcalendar.entity.UserRole.PROFESSIONAL) {
+                ProfessionalEntity myProf = professionalRepository.findByUserId(u.getId())
+                        .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("Perfil de profissional não localizado."));
+                if (!appointment.getProfessional().getId().equals(myProf.getId())) {
+                    throw new org.springframework.security.access.AccessDeniedException("Profissionais só podem acessar comandas dos seus próprios agendamentos.");
+                }
+            }
+        });
     }
 
     private EstablishmentEntity findEstablishment(UUID establishmentId) {
@@ -75,11 +92,12 @@ public class OrderService {
         if (!order.getEstablishment().getId().equals(establishmentId)) {
             throw new EntityNotFoundException("Comanda", orderId);
         }
+        validateOrderAccess(order.getAppointment());
         return order;
     }
 
     private void validateOpen(OrderEntity order) {
-        if (order.getStatus() == OrderStatus.CLOSED) {
+        if (order.getStatus() != OrderStatus.OPEN) {
             throw new BusinessException("Esta comanda já foi finalizada e não pode mais ser alterada.");
         }
     }
@@ -96,6 +114,11 @@ public class OrderService {
     @Transactional
     public OrderResponseDTO openOrder(UUID establishmentId, UUID appointmentId) {
         AppointmentEntity appointment = findAppointment(establishmentId, appointmentId);
+        validateOrderAccess(appointment);
+
+        if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
+            throw new BusinessException("Não é possível abrir comanda para um agendamento cancelado.");
+        }
 
         Optional<OrderEntity> existente = orderRepository.findByAppointmentId(appointmentId);
         if (existente.isPresent()) {

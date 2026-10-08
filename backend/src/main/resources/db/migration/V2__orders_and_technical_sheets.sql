@@ -53,20 +53,20 @@ CREATE TABLE IF NOT EXISTS technical_sheet_photos (
 
 CREATE TABLE IF NOT EXISTS photos (
     id UUID PRIMARY KEY,
-    data BLOB NOT NULL,
+    data BYTEA NOT NULL,
     content_type VARCHAR(255) NOT NULL,
     created_at TIMESTAMP NOT NULL
 );
 
 -- ── Produtos adicionais para o estabelecimento padrão ────────────────────────
-MERGE INTO products (id, establishment_id, name, category, price, stock_quantity, active, created_at, updated_at)
-KEY (id) VALUES (
+INSERT INTO products (id, establishment_id, name, category, price, stock_quantity, active, created_at, updated_at)
+VALUES (
     '33333333-3333-3333-3333-333333333334', '11111111-1111-1111-1111-111111111111',
     'Óleo para Barba', 'Barba', 45.00, 15, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-);
+) ON CONFLICT (id) DO NOTHING;
 
-MERGE INTO products (id, establishment_id, name, category, price, stock_quantity, active, created_at, updated_at)
-KEY (id) VALUES (
+INSERT INTO products (id, establishment_id, name, category, price, stock_quantity, active, created_at, updated_at)
+VALUES (
     '33333333-3333-3333-3333-333333333335', '11111111-1111-1111-1111-111111111111',
     'Shampoo Anticaspa', 'Cabelo', 38.00, 10, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-);
+) ON CONFLICT (id) DO NOTHING;

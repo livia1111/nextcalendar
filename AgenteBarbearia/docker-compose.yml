@@ -1,0 +1,79 @@
+services:
+
+  mongodb:
+    image: mongo:latest
+    container_name: agente-barbearia-mongodb
+    restart: always
+    ports:
+      - "27018:27017"
+    environment:
+      MONGO_INITDB_DATABASE: agente_barbearia
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - agente-barbearia-network
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: agente-barbearia-mongo-express
+    restart: always
+    ports:
+      - "5051:8081"
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongodb
+      ME_CONFIG_MONGODB_PORT: 27017
+      ME_CONFIG_BASICAUTH_USERNAME: edn
+      ME_CONFIG_BASICAUTH_PASSWORD: edn
+      ME_CONFIG_MONGODB_ENABLE_ADMIN: "true"
+    depends_on:
+      - mongodb
+    networks:
+      - agente-barbearia-network
+
+  postgres-evolution:
+    image: postgres:16-alpine
+    container_name: agente-barbearia-postgres-evolution
+    restart: always
+    environment:
+      POSTGRES_USER: evolution
+      POSTGRES_PASSWORD: evolution123
+      POSTGRES_DB: evolution
+    volumes:
+      - postgres_evolution_data:/var/lib/postgresql/data
+    networks:
+      - agente-barbearia-network
+
+  evolution-api:
+    image: evoapicloud/evolution-api:latest
+    container_name: agente-barbearia-evolution
+    restart: always
+    ports:
+      - "8080:8080"
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    environment:
+      AUTHENTICATION_API_KEY: "studiovision2026"
+      DATABASE_PROVIDER: "postgresql"
+      DATABASE_CONNECTION_URI: "postgresql://evolution:evolution123@postgres-evolution:5432/evolution"
+      SERVER_PORT: "8080"
+      SERVER_URL: "http://localhost:8080"
+      LOG_LEVEL: "LOG"
+      WEBHOOK_GLOBAL_ENABLED: "false"
+      CONFIG_SESSION_PHONE_CLIENT: "Studio Vision"
+      CONFIG_SESSION_PHONE_NAME: "Chrome"
+    volumes:
+      - evolution_instances:/evolution/instances
+    depends_on:
+      - postgres-evolution
+    networks:
+      - agente-barbearia-network
+
+volumes:
+  mongodb_data:
+  evolution_instances:
+  postgres_evolution_data:
+
+networks:
+  agente-barbearia-network:
+    driver: bridge

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Studio Vision — QR Code WhatsApp</title>
+  <style>
+    body { background: #0f0f1a; color: #fff; font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+    h1 { color: #25D366; font-size: 1.5rem; margin-bottom: 4px; }
+    p { color: #aaa; font-size: 0.9rem; margin-bottom: 20px; text-align: center; }
+    .qr-box { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 0 40px #25D36655; min-width: 280px; min-height: 280px; display: flex; align-items: center; justify-content: center; }
+    img { width: 280px; height: 280px; display: block; }
+    .placeholder { color: #aaa; font-size: 0.9rem; }
+    .timer { margin-top: 16px; font-size: 1.1rem; color: #25D366; font-weight: bold; }
+    .btn { margin-top: 16px; background: #25D366; color: #000; border: none; padding: 12px 28px; border-radius: 8px; font-size: 1rem; cursor: pointer; font-weight: bold; }
+    .btn:hover { background: #1ebe5a; }
+    .status { margin-top: 12px; font-size: 0.85rem; color: #888; }
+  </style>
+</head>
+<body>
+  <h1>📱 Studio Vision — WhatsApp</h1>
+  <p>Escaneie com: <strong>WhatsApp → Dispositivos conectados → Conectar dispositivo</strong></p>
+  <div class="qr-box">
+    <img id="qr" src="" alt="" style="display:none">
+    <span class="placeholder" id="placeholder">Carregando QR Code...</span>
+  </div>
+  <div class="timer">⏱ Atualizando em: <span id="countdown">30</span>s</div>
+  <button class="btn" onclick="buscarQR()">🔄 Atualizar QR Code</button>
+  <div class="status" id="status">Buscando QR Code no bridge...</div>
+
+  <script>
+    const BRIDGE = 'http://localhost:3001';
+    let seconds = 30;
+    let timerInterval;
+
+    async function buscarQR() {
+      const status = document.getElementById('status');
+      const qrImg = document.getElementById('qr');
+      const placeholder = document.getElementById('placeholder');
+
+      status.textContent = 'Buscando QR...';
+      status.style.color = '#888';
+
+      try {
+        const r = await fetch(BRIDGE + '/qr');
+        const data = await r.json();
+
+        if (data.status === 'conectado') {
+          qrImg.style.display = 'none';
+          placeholder.textContent = '✅ Conectado!';
+          placeholder.style.color = '#25D366';
+          status.textContent = '✅ WhatsApp conectado com sucesso! Pode fechar esta janela.';
+          status.style.color = '#25D366';
+          document.getElementById('countdown').textContent = '--';
+          clearInterval(timerInterval);
+          return;
+        }
+
+        if (data.qr) {
+          qrImg.src = data.qr;
+          qrImg.style.display = 'block';
+          placeholder.style.display = 'none';
+          status.textContent = 'QR atualizado às ' + new Date().toLocaleTimeString() + ' — escaneie agora!';
+          status.style.color = '#888';
+          reiniciarTimer();
+        } else {
+          placeholder.textContent = 'Aguardando QR Code...';
+          status.textContent = 'Bridge conectado, aguardando QR do WhatsApp...';
+          setTimeout(buscarQR, 2000);
+        }
+      } catch (e) {
+        placeholder.textContent = '❌ Erro de conexão';
+        status.textContent = 'Erro: bridge não está rodando em localhost:3001';
+        status.style.color = '#ff4444';
+        setTimeout(buscarQR, 3000); // tenta novamente em 3s
+      }
+    }
+
+    function reiniciarTimer() {
+      clearInterval(timerInterval);
+      seconds = 30;
+      const cd = document.getElementById('countdown');
+      cd.style.color = '#25D366';
+      timerInterval = setInterval(() => {
+        seconds--;
+        cd.textContent = seconds;
+        if (seconds <= 10) cd.style.color = '#ff4444';
+        if (seconds <= 0) {
+          clearInterval(timerInterval);
+          buscarQR(); // auto-refresh quando expirar
+        }
+      }, 1000);
+    }
+
+    // Inicia ao carregar
+    buscarQR();
+  </script>
+</body>
+</html>

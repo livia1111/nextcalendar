@@ -1,0 +1,63 @@
+@AgenteBarbearia.Api_HostAddress = http://localhost:5252
+
+### Catálogo
+GET {{AgenteBarbearia.Api_HostAddress}}/api/servicos
+Accept: application/json
+
+###
+GET {{AgenteBarbearia.Api_HostAddress}}/api/profissionais
+Accept: application/json
+
+### Horários livres (ajuste a data para um dia de terça a sábado)
+GET {{AgenteBarbearia.Api_HostAddress}}/api/horarios?data=2026-08-25&servicoId=Corte%20masculino
+Accept: application/json
+
+### Criar agendamento (troque servicoId, profissionalId e inicio pelos valores reais)
+POST {{AgenteBarbearia.Api_HostAddress}}/api/agendamentos
+Content-Type: application/json
+
+{
+  "nomeUsuario": "Joao",
+  "servicoId": "Corte masculino",
+  "profissionalId": "Carlos",
+  "inicio": "2026-08-25T15:00:00"
+}
+
+### Agenda do cliente
+GET {{AgenteBarbearia.Api_HostAddress}}/api/agendamentos?nomeUsuario=Joao
+Accept: application/json
+
+### Remarcar (troque o id)
+PUT {{AgenteBarbearia.Api_HostAddress}}/api/agendamentos/ID_DO_AGENDAMENTO
+Content-Type: application/json
+
+{
+  "nomeUsuario": "Joao",
+  "inicio": "2026-08-25T16:00:00"
+}
+
+### Cancelar (troque o id)
+POST {{AgenteBarbearia.Api_HostAddress}}/api/agendamentos/ID_DO_AGENDAMENTO/cancelar
+Content-Type: application/json
+
+{
+  "nomeUsuario": "Joao"
+}
+
+### Chat: pedir horários
+POST {{AgenteBarbearia.Api_HostAddress}}/api/Atendimento
+Content-Type: application/json
+
+{
+  "nomeUsuario": "Joao",
+  "mensagem": "Tem horário amanhã à tarde para corte?"
+}
+
+### Chat: confirmar um horário sugerido
+POST {{AgenteBarbearia.Api_HostAddress}}/api/Atendimento
+Content-Type: application/json
+
+{
+  "nomeUsuario": "Joao",
+  "mensagem": "Pode marcar 15h com o Carlos, corte masculino."
+}

@@ -1,6 +1,6 @@
 package com.nextcalendar;
 
-import tools.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nextcalendar.dto.order.OrderItemAddDTO;
 import com.nextcalendar.dto.order.OrderUpdateDTO;
 import com.nextcalendar.dto.product.ProductCreateDTO;

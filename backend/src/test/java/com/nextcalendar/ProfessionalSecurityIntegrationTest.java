@@ -1,6 +1,6 @@
 package com.nextcalendar;
 
-import tools.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nextcalendar.dto.appointment.BlockedTimeCreateDTO;
 import com.nextcalendar.dto.services.ServiceCreateDTO;
 import com.nextcalendar.entity.*;

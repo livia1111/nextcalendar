@@ -1,6 +1,6 @@
 package com.nextcalendar.config;
 
-import tools.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nextcalendar.entity.UserEntity;
 import com.nextcalendar.repository.UserRepository;
 import com.nextcalendar.service.JwtService;
